@@ -41,6 +41,27 @@
         html, body { height: 100%; overflow: hidden; }
         #app-viewport { height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
         #main-scroll-area { flex: 1 1 0%; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: 5.5rem; }
+
+        /* 장소 자동완성 추천 드롭다운 스타일 */
+        .autocomplete-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            max-height: 220px;
+            overflow-y: auto;
+            z-index: 60;
+            margin-top: 4px;
+            border: 1px solid #e5e7eb;
+        }
+        .dark .autocomplete-dropdown {
+            background: #1e293b;
+            border-color: #334155;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+        }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-900 dark:bg-darkBg dark:text-gray-100 transition-colors duration-300">
@@ -95,11 +116,11 @@
                         <div class="flex justify-between items-center mb-4">
                             <h2 class="text-lg font-bold flex items-center gap-2">
                                 <svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                                나의 여행 스케줄
+                                나의 여행 스케줄 <span class="text-xs font-normal text-gray-400">(좌우 스와이프)</span>
                             </h2>
                             <button onclick="switchTab('schedule')" class="text-xs text-blue-600 dark:text-blue-400 font-semibold hover:underline">수정하기</button>
                         </div>
-                        <div id="home-schedule-summary" class="space-y-3">
+                        <div id="home-schedule-summary" class="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide gap-3 pb-2 -mx-2 px-2">
                             <!-- JS에서 렌더링 -->
                         </div>
                     </div>
@@ -167,7 +188,6 @@
                         <h2 class="text-xl font-bold flex items-center gap-2">
                             일일 상세 스케줄
                         </h2>
-                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">시간과 장소를 5분 단위로 상세하게 계획해 보세요.</p>
                     </div>
                     
                     <!-- 일자별 탭 (Day 1 ~ Day 7) -->
@@ -330,58 +350,73 @@
         </div>
     </div>
 
-    <!-- Modal: 항공권 캡처본 보기 및 업로드 -->
-    <div id="ticket-image-modal" class="fixed inset-0 bg-black/80 z-[110] hidden flex items-center justify-center p-4 backdrop-blur-sm">
-        <div class="bg-white dark:bg-darkCard w-full max-w-md rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
-            <div class="p-4 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center bg-gray-50 dark:bg-gray-900">
-                <h3 id="ticket-img-title" class="font-bold text-lg text-gray-800 dark:text-white">🎟️ 탑승권 캡처본</h3>
-                <button onclick="closeTicketImageModal()" class="text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 bg-gray-200 dark:bg-gray-700 rounded-full p-1.5">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                </button>
-            </div>
-            <div class="flex-1 overflow-y-auto p-4 flex flex-col items-center justify-center min-h-[300px] bg-gray-100 dark:bg-gray-800">
-                <p id="no-ticket-img-text" class="text-gray-400 text-sm font-medium mb-4 hidden">등록된 캡처본이 없습니다.</p>
-                <img id="ticket-img-preview" src="" alt="탑승권 이미지" class="max-w-full h-auto rounded-lg shadow-sm hidden">
-            </div>
-            <div class="p-4 border-t border-gray-100 dark:border-gray-800 flex justify-between gap-3 bg-white dark:bg-darkCard">
-                <button onclick="removeTicketImage()" class="px-4 py-2 bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400 rounded-lg text-sm font-semibold hover:bg-red-100 transition flex-1">삭제</button>
-                <label for="ticket-image-upload" class="cursor-pointer text-center px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition flex-1">
-                    이미지 업로드
-                </label>
-                <input type="file" id="ticket-image-upload" accept="image/*" class="hidden" onchange="handleTicketImageUpload(event)">
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal: 날씨 상세정보 -->
-    <div id="weather-detail-modal" class="fixed inset-0 bg-black/60 z-[100] hidden flex items-center justify-center p-4 backdrop-blur-sm" onclick="closeWeatherDetail(event)">
+    <!-- Modal: 대중교통 경로 및 예상 소요시간 안내 -->
+    <div id="transit-route-modal" class="fixed inset-0 bg-black/60 z-[120] hidden flex items-center justify-center p-4 backdrop-blur-sm" onclick="closeTransitRouteModal(event)">
         <div class="bg-white dark:bg-darkCard w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden transform transition-all" onclick="event.stopPropagation()">
-            <div class="bg-gradient-to-br from-blue-400 to-blue-600 p-6 text-white text-center relative">
-                <button onclick="closeWeatherDetail()" class="absolute top-4 right-4 bg-black/20 hover:bg-black/30 p-1.5 rounded-full transition">
+            <div class="bg-gradient-to-r from-blue-600 to-indigo-600 p-5 text-white flex justify-between items-center">
+                <div class="flex items-center gap-2">
+                    <div class="p-2 bg-white/20 rounded-xl backdrop-blur-sm">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-base">대중교통 이동 정보</h3>
+                        <p class="text-[11px] text-blue-100">시드니 대중교통(트레인·트램·버스) 기준</p>
+                    </div>
+                </div>
+                <button onclick="closeTransitRouteModal()" class="text-white/80 hover:text-white bg-white/10 p-1.5 rounded-full transition">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                 </button>
-                <h3 id="wd-date" class="text-lg font-medium opacity-90 mb-1">날짜</h3>
-                <div class="text-6xl my-3" id="wd-icon">☀️</div>
-                <div class="text-4xl font-black mb-1" id="wd-temp">24°C</div>
-                <p class="text-lg font-medium opacity-90" id="wd-desc">맑음</p>
             </div>
-            <div class="p-5 space-y-4 max-h-[50vh] overflow-y-auto">
-                <div>
-                    <h4 class="text-xs font-bold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide">00시 ~ 23시 시간대별 기온</h4>
-                    <div id="wd-hourly-scroll" class="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-                        <!-- JS에서 24시간 상세 날씨 채움 -->
+            
+            <div class="p-5 space-y-4">
+                <!-- 출발지 & 도착지 -->
+                <div class="bg-gray-50 dark:bg-gray-800/60 p-3.5 rounded-2xl border border-gray-100 dark:border-gray-700/60 space-y-2">
+                    <div class="flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-blue-500 ring-4 ring-blue-100 dark:ring-blue-900/50"></span>
+                        <div class="flex-1 min-w-0">
+                            <span class="text-[10px] text-gray-400 font-medium block">출발지</span>
+                            <span id="route-modal-origin" class="text-xs font-bold text-gray-800 dark:text-gray-100 truncate block"></span>
+                        </div>
+                    </div>
+                    <div class="border-l border-dashed border-gray-300 dark:border-gray-600 h-3 ml-1.5"></div>
+                    <div class="flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-indigo-500 ring-4 ring-indigo-100 dark:ring-indigo-900/50"></span>
+                        <div class="flex-1 min-w-0">
+                            <span class="text-[10px] text-gray-400 font-medium block">도착지</span>
+                            <span id="route-modal-dest" class="text-xs font-bold text-gray-800 dark:text-gray-100 truncate block"></span>
+                        </div>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-2 gap-3 pt-2 border-t border-gray-100 dark:border-gray-800">
-                    <div class="bg-blue-50 dark:bg-blue-900/20 p-2.5 rounded-xl">
-                        <p class="text-[11px] text-gray-500 dark:text-gray-400 mb-0.5">최저 / 최고</p>
-                        <p class="text-sm font-bold text-gray-800 dark:text-gray-200" id="wd-minmax">-</p>
+                <!-- 예상 소요 시간 및 추천 경로 -->
+                <div class="flex items-center justify-between p-3.5 bg-blue-50/70 dark:bg-blue-900/20 rounded-2xl border border-blue-100 dark:border-blue-900/50">
+                    <div>
+                        <span class="text-[11px] text-blue-600 dark:text-blue-300 font-medium block">예상 소요 시간</span>
+                        <span id="route-modal-duration" class="text-2xl font-black text-blue-700 dark:text-blue-300">약 25분</span>
                     </div>
-                    <div class="bg-blue-50 dark:bg-blue-900/20 p-2.5 rounded-xl">
-                        <p class="text-[11px] text-gray-500 dark:text-gray-400 mb-0.5">최대 강수확률</p>
-                        <p class="text-sm font-bold text-gray-800 dark:text-gray-200" id="wd-rain">-</p>
+                    <div class="text-right">
+                        <span class="text-[11px] text-gray-400 block">권장 이동 수단</span>
+                        <span id="route-modal-type" class="text-xs font-bold text-gray-700 dark:text-gray-200">🚊 트레인 / 버스</span>
                     </div>
+                </div>
+
+                <!-- 상세 추천 동선 팁 -->
+                <div class="space-y-2">
+                    <h4 class="text-xs font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+                        <svg class="w-3.5 h-3.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        동선 안내 및 환승 정보
+                    </h4>
+                    <p id="route-modal-details" class="text-xs leading-relaxed text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-800/40 p-3 rounded-xl border border-gray-100 dark:border-gray-700/40"></p>
+                </div>
+
+                <div class="pt-2 flex gap-2">
+                    <button onclick="closeTransitRouteModal()" class="flex-1 py-2.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 text-gray-700 dark:text-gray-200 rounded-xl text-xs font-bold transition">
+                        닫기
+                    </button>
+                    <a id="route-modal-map-link" href="#" target="_blank" class="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold text-center shadow-md transition flex items-center justify-center gap-1">
+                        <span>구글맵 앱에서 보기</span>
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                    </a>
                 </div>
             </div>
         </div>
@@ -543,6 +578,125 @@
             if (h === 0) h = 12;
             else if (h > 12) h -= 12;
             return `${ampm} ${h}:${minStr}`;
+        }
+
+        /* --- 시드니 주요 거점 좌표 데이터베이스 & 대중교통 경로 산출 엔진 --- */
+        const SYDNEY_LANDMARKS = {
+            '옵저버토리힐': { lat: -33.8590, lng: 151.2045, hub: 'Wynyard' },
+            '본다이비치': { lat: -33.8915, lng: 151.2767, hub: 'Bondi Junction (333번 버스)' },
+            '블루마운틴': { lat: -33.7149, lng: 150.3114, hub: 'Central역 BMT Line (블루마운틴선)' },
+            '페더데일 동물원': { lat: -33.7667, lng: 150.8845, hub: 'Blacktown역 (729번 버스)' },
+            '루나파크': { lat: -33.8478, lng: 151.2097, hub: 'Milsons Point역 또는 페리' },
+            '패디스마켓': { lat: -33.8797, lng: 151.2037, hub: 'Haymarket 라이트레일' },
+            '시드니대학교': { lat: -33.8886, lng: 151.1873, hub: 'Redfern역 또는 422/423번 버스' },
+            '맥쿼리포인트': { lat: -33.8584, lng: 151.2183, hub: 'Circular Quay / 보태닉가든 도보' },
+            '로열보태닉가든': { lat: -33.8642, lng: 151.2166, hub: 'Martin Place / Circular Quay' },
+            '하이드파크': { lat: -33.8732, lng: 151.2113, hub: 'St James역 / Museum역' },
+            '맨리해변': { lat: -33.7999, lng: 151.2878, hub: 'Circular Quay F1 페리 (약 20분 소요)' },
+            'QVB': { lat: -33.8718, lng: 151.2067, hub: 'Town Hall역 직결' },
+            '스트랜드몰': { lat: -33.8693, lng: 151.2082, hub: 'Town Hall / Wynyard' },
+            '달링하버': { lat: -33.8749, lng: 151.2009, hub: 'Town Hall역 도보 / 페리' },
+            '서리힐스': { lat: -33.8860, lng: 151.2117, hub: 'Central역 도보 / L2/L3 트램' },
+            '서리힐스 (크라운스트리트)': { lat: -33.8860, lng: 151.2117, hub: 'Central역 도보 / L2/L3 트램' },
+            '파타고니아': { lat: -33.8695, lng: 151.2078, hub: 'Town Hall / Wynyard' },
+            '파타고니아 시드니': { lat: -33.8695, lng: 151.2078, hub: 'Town Hall / Wynyard' },
+            '서큘러키': { lat: -33.8614, lng: 151.2108, hub: 'Circular Quay역(트레인/페리)' },
+            '패딩턴마켓': { lat: -33.8862, lng: 151.2268, hub: '333번/380번 버스 (Oxford St)' },
+            '요치': { lat: -33.8865, lng: 151.2130, hub: '서리힐스 도보 / 센트럴역' },
+            '요미스라이스': { lat: -33.8770, lng: 151.2050, hub: '차이나타운 / Town Hall' },
+            '싱글오': { lat: -33.8828, lng: 151.2105, hub: 'Central역 도보 5분' },
+            '싱글오 (Single O)': { lat: -33.8828, lng: 151.2105, hub: 'Central역 도보 5분' },
+            '티카': { lat: -33.8720, lng: 151.2050, hub: 'Town Hall' },
+            '티카 (Tikka)': { lat: -33.8720, lng: 151.2050, hub: 'Town Hall' },
+            'Campos coffee': { lat: -33.8988, lng: 151.1795, hub: 'Newtown역 도보' },
+            'Lune coffee': { lat: -33.8620, lng: 151.2090, hub: 'Circular Quay / Wynyard' },
+            '시드니공항': { lat: -33.9399, lng: 151.1753, hub: 'Airport Line (T8 트레인)' },
+            '인천': { lat: 37.4602, lng: 126.4407, hub: '비행기' }
+        };
+
+        function calculateDistanceKm(lat1, lon1, lat2, lon2) {
+            const R = 6371;
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+
+        function findMatchingPlace(name) {
+            if (!name) return null;
+            const clean = name.trim().toLowerCase();
+            for (let key in SYDNEY_LANDMARKS) {
+                if (clean.includes(key.toLowerCase()) || key.toLowerCase().includes(clean)) {
+                    return { key, ...SYDNEY_LANDMARKS[key] };
+                }
+            }
+            return null;
+        }
+
+        function showTransitRouteInfo(origin, dest) {
+            const p1 = findMatchingPlace(origin);
+            const p2 = findMatchingPlace(dest);
+
+            document.getElementById('route-modal-origin').textContent = origin;
+            document.getElementById('route-modal-dest').textContent = dest;
+
+            let durationMinutes = 20;
+            let transitType = '🚊 시드니 트레인 / 버스';
+            let detailGuide = '';
+
+            const originSafe = encodeURIComponent(origin + ', Sydney');
+            const destSafe = encodeURIComponent(dest + ', Sydney');
+            const gmapsTransitUrl = `https://www.google.com/maps/dir/?api=1&origin=${originSafe}&destination=${destSafe}&travelmode=transit`;
+            document.getElementById('route-modal-map-link').href = gmapsTransitUrl;
+
+            // 특수 구간 판별
+            const combo = `${origin}_${dest}`;
+            if (combo.includes('블루마운틴')) {
+                durationMinutes = 115;
+                transitType = '🚆 인터시티 트레인 (BMT선)';
+                detailGuide = 'Central역에서 Blue Mountains Line 열차를 탑승하여 Katoomba역까지 이동합니다. 배차 간격 약 30~60분이며 Opal 교통카드로 탑승 가능합니다.';
+            } else if (combo.includes('맨리')) {
+                durationMinutes = 25;
+                transitType = '⛴️ F1 페리 (Circular Quay ↔ Manly)';
+                detailGuide = 'Circular Quay Wharf 3에서 F1 맨리행 페리를 탑승하세요. 오페라하우스와 하버브릿지를 감상하며 약 20~25분 만에 맨리 선착장에 도착합니다.';
+            } else if (combo.includes('본다이')) {
+                durationMinutes = 35;
+                transitType = '🚆 트레인 + 🚌 333번 직통 버스';
+                detailGuide = 'Town Hall 또는 Central에서 T4 트레인을 타고 Bondi Junction역에 하차 후, B번 스탠드에서 333번 자주 오는 급행 버스로 환승하세요.';
+            } else if (combo.includes('동물원') || combo.includes('페더데일')) {
+                durationMinutes = 60;
+                transitType = '🚆 T1 트레인 + 🚌 729번 버스';
+                detailGuide = 'Central역에서 T1 Western Line 탑승 후 Blacktown역 하차, 역 9번 정류장에서 729번 버스를 타고 Featherdale 바로 앞에서 하차합니다.';
+            } else if (p1 && p2) {
+                const dist = calculateDistanceKm(p1.lat, p1.lng, p2.lat, p2.lng);
+                if (dist < 1.2) {
+                    durationMinutes = Math.max(10, Math.round(dist * 13));
+                    transitType = '🚶 도보 또는 🚊 라이트레일(경전철)';
+                    detailGuide = `두 장소 간 직선 거리가 약 ${(dist).toFixed(1)}km로 매우 가깝습니다. George St를 따라 L2/L3 트램을 이용하시거나 도보로 쾌적하게 이동할 수 있습니다.`;
+                } else {
+                    durationMinutes = Math.min(80, Math.max(15, Math.round(dist * 4 + 8)));
+                    transitType = '🚊 City Circle 트레인 / 버스';
+                    detailGuide = `${p1.key}(${p1.hub})에서 승차하여 ${p2.key}(${p2.hub}) 방면 노선(T1/T2/T4 또는 시내 직통 버스)을 이용하세요. 평균 5~10분 간격으로 운행됩니다.`;
+                }
+            } else {
+                durationMinutes = 25;
+                transitType = '🚍 시드니 광역 대중교통';
+                detailGuide = `${origin}에서 ${dest}(으)로 이동하는 가장 빠른 지하철/버스 노선입니다. 시간대에 따라 실시간 배차를 구글맵에서 확인해 보세요.`;
+            }
+
+            document.getElementById('route-modal-duration').textContent = `약 ${durationMinutes}분`;
+            document.getElementById('route-modal-type').textContent = transitType;
+            document.getElementById('route-modal-details').textContent = detailGuide;
+
+            document.getElementById('transit-route-modal').classList.remove('hidden');
+        }
+
+        function closeTransitRouteModal(event) {
+            if(event && event.target.id !== 'transit-route-modal') return;
+            document.getElementById('transit-route-modal').classList.add('hidden');
         }
 
         /* --- 탭 전환 로직 --- */
@@ -1087,25 +1241,42 @@
                 const dayItems = (schedules[`day${i}`] || []).sort((a,b) => a.time.localeCompare(b.time));
                 if(dayItems.length > 0) {
                     hasAnySchedule = true;
-                    html += `<div class="mb-3 last:mb-0">
-                                <h4 class="text-sm font-bold text-gray-800 dark:text-gray-200 mb-1 border-l-2 border-blue-500 pl-2">Day ${i}</h4>
-                                <div class="space-y-1 pl-2.5 border-l-2 border-gray-100 dark:border-gray-700 ml-[1px]">`;
+                    html += `
+                        <div class="snap-start min-w-[78%] sm:min-w-[48%] bg-gray-50 dark:bg-gray-800/60 p-4 rounded-xl border border-gray-100 dark:border-gray-700/60 flex-shrink-0 flex flex-col justify-between">
+                            <div>
+                                <div class="flex justify-between items-center mb-2.5 pb-2 border-b border-gray-200/60 dark:border-gray-700/60">
+                                    <h4 class="text-sm font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
+                                        <span class="w-2 h-2 rounded-full bg-blue-500"></span> Day ${i}
+                                    </h4>
+                                    <span class="text-[11px] text-gray-400 font-medium">${dayItems.length}개 일정</span>
+                                </div>
+                                <div class="space-y-2">`;
                     
                     const previewItems = dayItems.slice(0, 3);
                     previewItems.forEach(item => {
                         const formattedTime = formatKoreanTime(item.time);
-                        html += `<div class="text-sm flex gap-2 items-baseline"><span class="text-blue-600 dark:text-blue-400 font-semibold min-w-[70px] text-xs">${formattedTime}</span> <span class="text-gray-700 dark:text-gray-300 truncate">${item.place}</span></div>`;
+                        html += `
+                            <div class="text-xs flex items-center gap-2">
+                                <span class="text-blue-600 dark:text-blue-400 font-semibold min-w-[58px] text-[11px]">${formattedTime}</span>
+                                <span class="text-gray-800 dark:text-gray-200 font-medium truncate">${item.place}</span>
+                            </div>`;
                     });
                     
                     if(dayItems.length > 3) {
-                        html += `<div class="text-xs text-gray-400 mt-1 font-medium">+${dayItems.length - 3}개 일정 더보기</div>`;
+                        html += `<div class="text-[11px] text-gray-400 pt-1 font-medium">+${dayItems.length - 3}개 일정 더보기</div>`;
                     }
-                    html += `</div></div>`;
+                    html += `
+                                </div>
+                            </div>
+                            <button onclick="switchTab('schedule'); switchDayTab(${i});" class="mt-3 text-[11px] text-blue-500 hover:text-blue-600 dark:text-blue-400 text-left font-semibold">
+                                상세 보기 →
+                            </button>
+                        </div>`;
                 }
             }
             
             if(!hasAnySchedule) {
-                html = `<p class="text-sm text-gray-500 text-center py-4 bg-gray-50 dark:bg-gray-800 rounded-lg">아직 저장된 스케줄이 없습니다.<br>스케줄 탭에서 여행 일정을 추가해 보세요!</p>`;
+                html = `<p class="text-sm text-gray-500 text-center py-6 bg-gray-50 dark:bg-gray-800 rounded-xl w-full">아직 저장된 스케줄이 없습니다.<br>스케줄 탭에서 여행 일정을 추가해 보세요!</p>`;
             }
             container.innerHTML = html;
         }
@@ -1180,7 +1351,7 @@
             html += `</div>
                 <div class="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-xl mt-4 border border-blue-100 dark:border-blue-900/50">
                     <div class="flex flex-col gap-2">
-                        <div class="flex gap-2">
+                        <div class="flex gap-2 relative">
                             <div class="flex flex-shrink-0 gap-1 items-center" style="width: 145px;">
                                 <select id="ampm-day${i}" class="w-full text-xs border border-gray-300 rounded-lg py-2 px-1 dark:bg-gray-800 dark:border-gray-600 dark:text-white outline-none bg-white cursor-pointer">
                                     <option value="AM">오전</option>
@@ -1194,7 +1365,10 @@
                                     ${Array.from({length: 12}, (_, k) => { let v = String(k * 5).padStart(2, '0'); return `<option value="${v}">${v}</option>`; }).join('')}
                                 </select>
                             </div>
-                            <input type="text" id="place-day${i}" placeholder="장소명" class="flex-1 min-w-0 text-sm border border-gray-300 rounded-lg p-2 dark:bg-gray-800 dark:border-gray-600 dark:text-white outline-none focus:border-blue-500 bg-white">
+                            <div class="flex-1 min-w-0 relative">
+                                <input type="text" id="place-day${i}" placeholder="장소명 (입력 시 자동완성)" autocomplete="off" oninput="handlePlaceInput(${i}, this.value)" class="w-full text-sm border border-gray-300 rounded-lg p-2 dark:bg-gray-800 dark:border-gray-600 dark:text-white outline-none focus:border-blue-500 bg-white">
+                                <div id="autocomplete-list-day${i}" class="autocomplete-dropdown hidden"></div>
+                            </div>
                         </div>
                         <div class="flex gap-2">
                             <input type="text" id="activity-day${i}" placeholder="할 일 메모 (선택)" class="flex-1 text-sm border border-gray-300 rounded-lg p-2 dark:bg-gray-800 dark:border-gray-600 dark:text-white outline-none focus:border-blue-500 bg-white">
@@ -1206,6 +1380,135 @@
             
             container.innerHTML = html;
         }
+
+        /* --- 장소 실시간 자동완성 (시드니 지리 & 명소 연동) --- */
+        let placeDebounceTimer = null;
+
+        function handlePlaceInput(day, keyword) {
+            clearTimeout(placeDebounceTimer);
+            const listContainer = document.getElementById(`autocomplete-list-day${day}`);
+            if (!listContainer) return;
+
+            const q = keyword.trim();
+            if (!q || q.length < 1) {
+                listContainer.innerHTML = '';
+                listContainer.classList.add('hidden');
+                return;
+            }
+
+            placeDebounceTimer = setTimeout(() => {
+                searchSydneyPlaces(day, q);
+            }, 250);
+        }
+
+        async function searchSydneyPlaces(day, query) {
+            const listContainer = document.getElementById(`autocomplete-list-day${day}`);
+            if (!listContainer) return;
+
+            // 1. 사용자가 등록해둔 방문 예정지(명소, 맛집, 쇼핑)에서 일치 항목 우선 탐색
+            const localPlaces = [];
+            if (placesData) {
+                ['sights', 'food', 'shopping'].forEach(cat => {
+                    (placesData[cat] || []).forEach(p => {
+                        if (p.toLowerCase().includes(query.toLowerCase()) && !localPlaces.includes(p)) {
+                            localPlaces.push({ name: p, address: '내 등록 장소 목록', icon: '📍' });
+                        }
+                    });
+                });
+            }
+
+            // 2. OpenStreetMap Nominatim 지오코딩 엔진 (시드니 영역 바운딩 제한) 연동
+            try {
+                const endpoint = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query + ' Sydney')}&format=json&addressdetails=1&limit=5&viewbox=150.5,-34.1,151.4,-33.6&bounded=0`;
+                const res = await fetch(endpoint, {
+                    headers: { 'Accept-Language': 'ko,en' }
+                });
+                
+                let results = [];
+                if (res.ok) {
+                    const data = await res.json();
+                    results = data.map(item => {
+                        const mainName = item.namedetails?.name || item.name || item.display_name.split(',')[0];
+                        const subName = item.display_name.split(',').slice(1, 3).join(', ').trim();
+                        return {
+                            name: mainName,
+                            address: subName || 'Sydney, NSW',
+                            icon: '🗺️'
+                        };
+                    });
+                }
+
+                // 중복 제거 및 결합
+                const combined = [...localPlaces];
+                results.forEach(r => {
+                    if (!combined.some(c => c.name.toLowerCase() === r.name.toLowerCase())) {
+                        combined.push(r);
+                    }
+                });
+
+                if (combined.length === 0) {
+                    listContainer.innerHTML = `
+                        <div class="p-3 text-xs text-gray-400 text-center">검색 결과가 없습니다.</div>
+                    `;
+                    listContainer.classList.remove('hidden');
+                    return;
+                }
+
+                listContainer.innerHTML = combined.map(item => `
+                    <div onclick="selectPlaceSuggestion(${day}, '${item.name.replace(/'/g, "\\'")}')" class="p-2.5 px-3 hover:bg-blue-50 dark:hover:bg-gray-700/60 cursor-pointer border-b border-gray-100 dark:border-gray-800 last:border-0 transition-colors flex items-center justify-between text-left">
+                        <div class="flex items-center gap-2 overflow-hidden">
+                            <span class="text-sm flex-shrink-0">${item.icon}</span>
+                            <div class="overflow-hidden">
+                                <p class="text-xs font-semibold text-gray-800 dark:text-gray-100 truncate">${item.name}</p>
+                                <p class="text-[10px] text-gray-400 truncate">${item.address}</p>
+                            </div>
+                        </div>
+                        <span class="text-[10px] text-blue-500 font-medium whitespace-nowrap ml-2">선택</span>
+                    </div>
+                `).join('');
+
+                listContainer.classList.remove('hidden');
+            } catch (err) {
+                console.warn('장소 자동완성 호출 실패:', err);
+                if (localPlaces.length > 0) {
+                    listContainer.innerHTML = localPlaces.map(item => `
+                        <div onclick="selectPlaceSuggestion(${day}, '${item.name.replace(/'/g, "\\'")}')" class="p-2.5 px-3 hover:bg-blue-50 dark:hover:bg-gray-700/60 cursor-pointer border-b border-gray-100 dark:border-gray-800 last:border-0 transition-colors flex items-center gap-2 text-left">
+                            <span class="text-sm">${item.icon}</span>
+                            <div>
+                                <p class="text-xs font-semibold text-gray-800 dark:text-gray-100 truncate">${item.name}</p>
+                                <p class="text-[10px] text-gray-400">${item.address}</p>
+                            </div>
+                        </div>
+                    `).join('');
+                    listContainer.classList.remove('hidden');
+                } else {
+                    listContainer.classList.add('hidden');
+                }
+            }
+        }
+
+        function selectPlaceSuggestion(day, placeName) {
+            const input = document.getElementById(`place-day${day}`);
+            if (input) input.value = placeName;
+            const listContainer = document.getElementById(`autocomplete-list-day${day}`);
+            if (listContainer) {
+                listContainer.innerHTML = '';
+                listContainer.classList.add('hidden');
+            }
+        }
+
+        // 바깥 영역 클릭 시 자동완성 닫기
+        document.addEventListener('click', function(e) {
+            for (let i = 1; i <= 7; i++) {
+                const list = document.getElementById(`autocomplete-list-day${i}`);
+                const input = document.getElementById(`place-day${i}`);
+                if (list && !list.classList.contains('hidden')) {
+                    if (e.target !== list && !list.contains(e.target) && e.target !== input) {
+                        list.classList.add('hidden');
+                    }
+                }
+            }
+        });
 
         function addSchedule(day) {
             const ampm = document.getElementById(`ampm-day${day}`).value;
@@ -1249,6 +1552,67 @@
             safeStorage.setItem('sydney_schedules', JSON.stringify(schedules));
             renderSchedule();
             renderHomeSchedule();
+        }
+
+        /* --- 간략 경로 정보 계산 및 인라인 카드 토글 --- */
+        function getTransitSummary(from, to) {
+            const combined = (from + ' ' + to).toLowerCase();
+            
+            if (combined.includes('블루마운틴')) {
+                return { duration: '약 2시간', method: '🚆 BMT 트레인 직통' };
+            }
+            if (combined.includes('본다이')) {
+                return { duration: '약 35분', method: '🚆 트레인 + 🚌 333번 직통 버스' };
+            }
+            if (combined.includes('맨리')) {
+                return { duration: '약 30분', method: '⛴️ 서큘러키 F1 페리' };
+            }
+            if (combined.includes('페더데일')) {
+                return { duration: '약 1시간 10분', method: '🚆 T1 트레인 + 🚌 729번 버스' };
+            }
+            if (combined.includes('루나파크')) {
+                return { duration: '약 15분', method: '⛴️ 밀슨스포인트 페리 or 🚆 트레인' };
+            }
+            if (combined.includes('시드니대학') || combined.includes('대학교')) {
+                return { duration: '약 20분', method: '🚌 422/423/426번 시내버스' };
+            }
+            if (combined.includes('서리힐스')) {
+                return { duration: '약 15분', method: '🚋 L2/L3 라이트레일' };
+            }
+            if (combined.includes('공항') || combined.includes('syd')) {
+                return { duration: '약 25분', method: '🚆 T8 에어포트 라인' };
+            }
+            if (combined.includes('패디스') || combined.includes('차이나타운')) {
+                return { duration: '약 12분', method: '🚋 L1 라이트레일 or 도보' };
+            }
+            return { duration: '약 15~25분', method: '🚆 트레인 or 🚌 시내버스 환승' };
+        }
+
+        function toggleRouteCard(cardId, from, to) {
+            const cardEl = document.getElementById(cardId);
+            if (!cardEl) return;
+
+            if (!cardEl.classList.contains('hidden')) {
+                cardEl.classList.add('hidden');
+                return;
+            }
+
+            const info = getTransitSummary(from, to);
+            cardEl.innerHTML = `
+                <div class="bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/80 rounded-2xl p-4 shadow-sm flex items-center justify-between">
+                    <div>
+                        <span class="text-xs font-semibold text-blue-600 dark:text-blue-400 block mb-0.5">예상 소요 시간</span>
+                        <span class="text-xl sm:text-2xl font-black text-blue-700 dark:text-blue-300 tracking-tight">${info.duration}</span>
+                    </div>
+                    <div class="text-right pl-3">
+                        <span class="text-[11px] font-medium text-gray-400 dark:text-gray-400 block mb-1">권장 이동 수단</span>
+                        <div class="text-xs sm:text-sm font-bold text-gray-800 dark:text-gray-200 flex items-center justify-end gap-1 flex-wrap">
+                            <span>${info.method}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            cardEl.classList.remove('hidden');
         }
 
         function renderItinerary() {
