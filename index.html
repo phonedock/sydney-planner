@@ -350,6 +350,88 @@
         </div>
     </div>
 
+    <!-- Modal: 항공권 캡처본 확인 및 업로드 -->
+    <div id="ticket-image-modal" class="fixed inset-0 bg-black/70 z-[110] hidden flex items-center justify-center p-4 backdrop-blur-sm" onclick="closeTicketImageModal()">
+        <div class="bg-white dark:bg-darkCard w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden transform transition-all" onclick="event.stopPropagation()">
+            <div class="p-4 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center">
+                <h3 id="ticket-img-title" class="font-bold text-base text-gray-900 dark:text-white">✈️ 항공권 캡처본</h3>
+                <button onclick="closeTicketImageModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <div class="p-4 flex flex-col items-center">
+                <div class="w-full max-h-[55vh] min-h-[180px] bg-gray-100 dark:bg-gray-800/80 rounded-2xl flex items-center justify-center overflow-auto p-2 border border-dashed border-gray-300 dark:border-gray-700">
+                    <img id="ticket-img-preview" src="" alt="항공권 캡처본" class="max-w-full max-h-[50vh] object-contain rounded-xl hidden shadow-sm">
+                    <div id="no-ticket-img-text" class="text-center p-4">
+                        <svg class="w-10 h-10 text-gray-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 font-medium">등록된 항공권 이미지가 없습니다.<br>아래 버튼을 눌러 이미지를 추가해 보세요.</p>
+                    </div>
+                </div>
+                <div class="flex gap-2 w-full mt-4">
+                    <label for="ticket-image-upload" class="flex-1 cursor-pointer bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl text-xs font-bold text-center shadow transition flex items-center justify-center gap-1.5">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                        사진 업로드
+                    </label>
+                    <input type="file" id="ticket-image-upload" accept="image/*" class="hidden" onchange="handleTicketImageUpload(event)">
+                    <button onclick="removeTicketImage()" class="px-3.5 py-2.5 bg-gray-100 hover:bg-red-50 text-gray-600 hover:text-red-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-red-900/30 rounded-xl text-xs font-bold transition">
+                        삭제
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: 날씨 상세정보 모달 (24시간 시간별 상세 예보) -->
+    <div id="weather-detail-modal" class="fixed inset-0 bg-black/60 z-[120] hidden flex items-center justify-center p-4 backdrop-blur-sm" onclick="closeWeatherDetail(event)">
+        <div class="bg-white dark:bg-darkCard w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden transform transition-all" onclick="event.stopPropagation()">
+            <div class="bg-gradient-to-r from-blue-500 to-indigo-600 p-5 text-white flex justify-between items-center">
+                <div class="flex items-center gap-2">
+                    <span id="wd-icon" class="text-3xl">⛅</span>
+                    <div>
+                        <h3 id="wd-date" class="font-bold text-base leading-tight">날씨 정보</h3>
+                        <p id="wd-desc" class="text-xs text-blue-100 mt-0.5">맑음</p>
+                    </div>
+                </div>
+                <button onclick="document.getElementById('weather-detail-modal').classList.add('hidden')" class="text-white/80 hover:text-white bg-white/10 p-1.5 rounded-full transition">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            
+            <div class="p-5 space-y-4">
+                <!-- 주요 지표 -->
+                <div class="grid grid-cols-3 gap-2 text-center">
+                    <div class="bg-blue-50/70 dark:bg-blue-900/20 p-2.5 rounded-xl border border-blue-100 dark:border-blue-900/50">
+                        <span class="text-[10px] text-gray-400 block mb-0.5">최고 기온</span>
+                        <span id="wd-temp" class="text-sm font-black text-blue-600 dark:text-blue-400">--°C</span>
+                    </div>
+                    <div class="bg-blue-50/70 dark:bg-blue-900/20 p-2.5 rounded-xl border border-blue-100 dark:border-blue-900/50">
+                        <span class="text-[10px] text-gray-400 block mb-0.5">최저 / 최고</span>
+                        <span id="wd-minmax" class="text-xs font-bold text-gray-700 dark:text-gray-200">--</span>
+                    </div>
+                    <div class="bg-blue-50/70 dark:bg-blue-900/20 p-2.5 rounded-xl border border-blue-100 dark:border-blue-900/50">
+                        <span class="text-[10px] text-gray-400 block mb-0.5">강수 확률</span>
+                        <span id="wd-rain" class="text-sm font-bold text-blue-500">--%</span>
+                    </div>
+                </div>
+
+                <!-- 00시~23시 시간대별 스크롤 -->
+                <div>
+                    <h4 class="text-xs font-bold text-gray-700 dark:text-gray-300 mb-2 flex items-center justify-between">
+                        <span>시간대별 예보 (00시 ~ 23시)</span>
+                        <span class="text-[10px] font-normal text-gray-400">좌우 스크롤</span>
+                    </h4>
+                    <div id="wd-hourly-scroll" class="flex gap-2 overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1">
+                        <!-- JS에서 동적 채움 -->
+                    </div>
+                </div>
+
+                <button onclick="document.getElementById('weather-detail-modal').classList.add('hidden')" class="w-full py-2.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 text-gray-700 dark:text-gray-200 rounded-xl text-xs font-bold transition">
+                    닫기
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal: 대중교통 경로 및 예상 소요시간 안내 -->
     <div id="transit-route-modal" class="fixed inset-0 bg-black/60 z-[120] hidden flex items-center justify-center p-4 backdrop-blur-sm" onclick="closeTransitRouteModal(event)">
         <div class="bg-white dark:bg-darkCard w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden transform transition-all" onclick="event.stopPropagation()">
