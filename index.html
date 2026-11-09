@@ -6,6 +6,8 @@
     <title>시드니 여행 계획 (5박 7일)</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- PeerJS for WebRTC P2P Realtime Sync -->
+    <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -249,6 +251,58 @@
                             </div>
                         </div>
 
+                        <!-- P2P 실시간 공동 편집 패널 -->
+                        <div class="bg-white dark:bg-darkCard rounded-2xl shadow-sm p-5">
+                            <div class="flex justify-between items-center mb-2">
+                                <h2 class="text-lg font-bold flex items-center gap-2">
+                                    <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                                    P2P 실시간 공유 & 공동 편집
+                                </h2>
+                                <span id="p2p-status-badge" class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400 flex items-center gap-1.5">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-gray-400"></span> 미연결
+                                </span>
+                            </div>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">외부 서버 없이 브라우저 간 직접 연결(P2P)하여 동행자와 일정을 함께 실시간 편집합니다.</p>
+
+                            <!-- 미연결 시 UI -->
+                            <div id="p2p-disconnected-view" class="space-y-3">
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <!-- 방 만들기 버튼 -->
+                                    <button onclick="openCreateRoomModal()" class="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-xl text-xs font-bold shadow transition">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                                        공유방 만들기 (공유 설정)
+                                    </button>
+
+                                    <!-- 방 참가하기 입력창 및 버튼 -->
+                                    <div class="flex gap-1.5">
+                                        <input type="text" id="p2p-join-code-input" placeholder="6자리 초대 코드" maxlength="6" class="flex-1 uppercase text-center font-mono text-sm border border-gray-300 dark:border-gray-600 rounded-xl p-2.5 bg-gray-50 dark:bg-gray-800 dark:text-white outline-none focus:border-blue-500">
+                                        <button onclick="joinP2PRoom()" class="bg-gray-800 dark:bg-gray-700 hover:bg-gray-900 text-white px-3.5 rounded-xl text-xs font-bold transition">
+                                            참여
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 연결 후 제어 UI -->
+                            <div id="p2p-connected-view" class="hidden space-y-3 mt-3 pt-3 border-t border-gray-100 dark:border-gray-800">
+                                <div class="bg-blue-50/70 dark:bg-blue-900/20 p-3 rounded-xl border border-blue-100 dark:border-blue-900/50 flex items-center justify-between">
+                                    <div>
+                                        <span class="text-[10px] text-gray-400 block font-medium">내 방 초대 코드</span>
+                                        <span id="p2p-room-code-display" class="text-lg font-mono font-black text-blue-600 dark:text-blue-400 tracking-wider">------</span>
+                                    </div>
+                                    <button onclick="copyRoomCode()" class="text-xs bg-white dark:bg-gray-800 border border-blue-200 dark:border-gray-700 px-3 py-1.5 rounded-lg font-semibold text-blue-600 dark:text-blue-300 hover:bg-blue-50 transition shadow-sm">
+                                        코드 복사
+                                    </button>
+                                </div>
+                                <div id="p2p-shared-scopes-info" class="text-[11px] text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 p-2.5 rounded-lg">
+                                    공유 항목: 스케줄, 체크리스트, 방문 장소
+                                </div>
+                                <button onclick="disconnectP2P()" class="w-full text-center text-xs text-red-500 hover:text-red-600 py-1.5 font-medium">
+                                    P2P 공유 연결 종료
+                                </button>
+                            </div>
+                        </div>
+
                         <!-- 개인별 데이터 백업 및 복원 -->
                         <div class="bg-white dark:bg-darkCard rounded-2xl shadow-sm p-5">
                             <h2 class="text-lg font-bold mb-1 flex items-center gap-2">
@@ -268,7 +322,7 @@
                                 <input type="file" id="import-file-input" accept=".json" class="hidden" onchange="importUserData(event)">
                             </div>
 
-                            <button onclick="resetAllData()" class="w-full text-center text-xs text-red-500 dark:text-red-400 hover:underline py-2">
+                            <button onclick="openResetConfirmModal()" class="w-full text-center text-xs text-red-500 dark:text-red-400 hover:underline py-2">
                                 모든 여행 데이터를 초기 상태로 리셋
                             </button>
                         </div>
@@ -302,6 +356,87 @@
                 </button>
             </div>
         </nav>
+    </div>
+
+    <!-- Modal: P2P 방 만들기 및 공유 항목 설정 -->
+    <div id="p2p-create-modal" class="fixed inset-0 bg-black/60 z-[110] hidden flex items-center justify-center p-4 backdrop-blur-sm" onclick="closeCreateRoomModal(event)">
+        <div class="bg-white dark:bg-darkCard w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden transform transition-all" onclick="event.stopPropagation()">
+            <div class="p-5 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center">
+                <h3 class="font-bold text-base flex items-center gap-2">
+                    <span>👥</span> P2P 공유방 만들기
+                </h3>
+                <button onclick="closeCreateRoomModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            
+            <div class="p-5 space-y-4">
+                <!-- 1. 초기 데이터 선택 -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-2">시작 데이터 불러오기</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <label class="cursor-pointer border border-blue-500 bg-blue-50/50 dark:bg-blue-900/20 dark:border-blue-500 p-3 rounded-xl flex items-center gap-2">
+                            <input type="radio" name="p2p-init-source" value="my" checked class="text-blue-600">
+                            <div class="text-left">
+                                <span class="text-xs font-bold block text-blue-600 dark:text-blue-400">내 현재 데이터</span>
+                                <span class="text-[10px] text-gray-400">내 일정 기반 시작</span>
+                            </div>
+                        </label>
+                        <label class="cursor-pointer border border-gray-200 dark:border-gray-700 p-3 rounded-xl flex items-center gap-2">
+                            <input type="radio" name="p2p-init-source" value="empty" class="text-blue-600">
+                            <div class="text-left">
+                                <span class="text-xs font-bold block text-gray-700 dark:text-gray-300">새 빈 일정</span>
+                                <span class="text-[10px] text-gray-400">초기화 상태 시작</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- 2. 공유할 부분 정하기 (체크박스) -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-2">실시간 공유할 항목 선택</label>
+                    <div class="space-y-2 bg-gray-50 dark:bg-gray-800/50 p-3.5 rounded-2xl border border-gray-100 dark:border-gray-700/60">
+                        <label class="flex items-center justify-between text-xs cursor-pointer">
+                            <span class="font-medium text-gray-800 dark:text-gray-200 flex items-center gap-2">
+                                <span>🗓️</span> 일일 상세 스케줄
+                            </span>
+                            <input type="checkbox" id="scope-schedule" checked class="w-4 h-4 rounded text-blue-600 focus:ring-blue-500">
+                        </label>
+                        <label class="flex items-center justify-between text-xs cursor-pointer">
+                            <span class="font-medium text-gray-800 dark:text-gray-200 flex items-center gap-2">
+                                <span>✅</span> 준비물 체크리스트
+                            </span>
+                            <input type="checkbox" id="scope-checklist" checked class="w-4 h-4 rounded text-blue-600 focus:ring-blue-500">
+                        </label>
+                        <label class="flex items-center justify-between text-xs cursor-pointer">
+                            <span class="font-medium text-gray-800 dark:text-gray-200 flex items-center gap-2">
+                                <span>📍</span> 방문 예정 장소 목록
+                            </span>
+                            <input type="checkbox" id="scope-places" checked class="w-4 h-4 rounded text-blue-600 focus:ring-blue-500">
+                        </label>
+                        <label class="flex items-center justify-between text-xs cursor-pointer">
+                            <span class="font-medium text-gray-800 dark:text-gray-200 flex items-center gap-2">
+                                <span>✈️</span> 항공권(탑승권) 정보
+                            </span>
+                            <input type="checkbox" id="scope-flight" checked class="w-4 h-4 rounded text-blue-600 focus:ring-blue-500">
+                        </label>
+                        <label class="flex items-center justify-between text-xs cursor-pointer">
+                            <span class="font-medium text-gray-800 dark:text-gray-200 flex items-center gap-2">
+                                <span>📝</span> 일정 러프 스케치 메모
+                            </span>
+                            <input type="checkbox" id="scope-itinerary" checked class="w-4 h-4 rounded text-blue-600 focus:ring-blue-500">
+                        </label>
+                    </div>
+                </div>
+
+                <div class="pt-2">
+                    <button onclick="startCreatingP2PRoom()" class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-md transition flex items-center justify-center gap-2">
+                        <span>방 생성 및 코드 발급</span>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Modal: 항공권 정보 수정 -->
@@ -504,6 +639,29 @@
         </div>
     </div>
 
+    <!-- Modal: 전체 데이터 리셋 확인 경고 팝업 -->
+    <div id="reset-confirm-modal" class="fixed inset-0 bg-black/60 z-[130] hidden flex items-center justify-center p-4 backdrop-blur-sm" onclick="closeResetConfirmModal(event)">
+        <div class="bg-white dark:bg-darkCard w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden transform transition-all text-center p-6 space-y-4" onclick="event.stopPropagation()">
+            <div class="w-14 h-14 mx-auto rounded-full bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 flex items-center justify-center">
+                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+            </div>
+            <div>
+                <h3 class="text-base font-bold text-gray-900 dark:text-white">모든 데이터를 초기화할까요?</h3>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-2 leading-relaxed">
+                    작성하신 모든 스케줄, 체크리스트, 방문 장소 및 메모가 삭제되고 기본값으로 돌아갑니다. 이 작업은 되돌릴 수 없습니다.
+                </p>
+            </div>
+            <div class="grid grid-cols-2 gap-2 pt-2">
+                <button onclick="closeResetConfirmModal()" class="py-2.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl text-xs font-bold transition">
+                    취소
+                </button>
+                <button onclick="confirmResetAllData()" class="py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold shadow-md transition">
+                    초기화 진행
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- JavaScript Logic -->
     <script>
         /* --- 기본 데이터 구조 (출발/귀국 분리) --- */
@@ -577,6 +735,320 @@
         let currentDayTab = 1;
         let realWeatherForecast = [];
 
+        /* --- P2P (PeerJS) 실시간 통신 상태 관리 --- */
+        let peerInstance = null;
+        let activePeerConn = null;
+        let p2pRoomCode = null;
+        let p2pRole = null; // 'host' | 'client'
+        let sharedScopes = {
+            schedule: true,
+            checklist: true,
+            places: true,
+            flight: true,
+            itinerary: true
+        };
+
+        function updateP2PStatusUI(status, label) {
+            const badge = document.getElementById('p2p-status-badge');
+            const disView = document.getElementById('p2p-disconnected-view');
+            const connView = document.getElementById('p2p-connected-view');
+            if (!badge) return;
+
+            if (status === 'connected') {
+                badge.className = "px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 flex items-center gap-1.5 animate-pulse";
+                badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> ${label || '실시간 연결됨'}`;
+                if (disView) disView.classList.add('hidden');
+                if (connView) connView.classList.remove('hidden');
+            } else if (status === 'waiting') {
+                badge.className = "px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 flex items-center gap-1.5";
+                badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping"></span> ${label || '참가자 대기 중'}`;
+                if (disView) disView.classList.add('hidden');
+                if (connView) connView.classList.remove('hidden');
+            } else {
+                badge.className = "px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400 flex items-center gap-1.5";
+                badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-gray-400"></span> 미연결`;
+                if (disView) disView.classList.remove('hidden');
+                if (connView) connView.classList.add('hidden');
+            }
+        }
+
+        function openCreateRoomModal() {
+            document.getElementById('p2p-create-modal').classList.remove('hidden');
+        }
+
+        function closeCreateRoomModal(event) {
+            if (event && event.target.id !== 'p2p-create-modal') return;
+            document.getElementById('p2p-create-modal').classList.add('hidden');
+        }
+
+        function generate6DigitCode() {
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+            let res = '';
+            for (let i = 0; i < 6; i++) {
+                res += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return res;
+        }
+
+        function startCreatingP2PRoom() {
+            // 공유 스코프 설정 읽기
+            sharedScopes = {
+                schedule: document.getElementById('scope-schedule').checked,
+                checklist: document.getElementById('scope-checklist').checked,
+                places: document.getElementById('scope-places').checked,
+                flight: document.getElementById('scope-flight').checked,
+                itinerary: document.getElementById('scope-itinerary').checked
+            };
+
+            const initSource = document.querySelector('input[name="p2p-init-source"]:checked').value;
+            if (initSource === 'empty') {
+                // 빈 데이터로 시작
+                schedules = {};
+                checklistData = [];
+                placesData = { sights: [], food: [], shopping: [] };
+                safeStorage.setItem('sydney_schedules', JSON.stringify(schedules));
+                safeStorage.setItem('sydney_checklist', JSON.stringify(checklistData));
+                safeStorage.setItem('sydney_places', JSON.stringify(placesData));
+                renderChecklist();
+                renderPlaces();
+                renderSchedule();
+                renderHomeSchedule();
+            } else {
+                // 내 현재 로컬스토리지 데이터를 그대로 로드하여 기반 삼음
+                loadStoredData();
+            }
+
+            closeCreateRoomModal();
+
+            // P2P Peer 생성
+            p2pRoomCode = generate6DigitCode();
+            p2pRole = 'host';
+            const peerId = `syd-${p2pRoomCode.toLowerCase()}`;
+
+            if (peerInstance) peerInstance.destroy();
+            
+            try {
+                peerInstance = new Peer(peerId, { debug: 1 });
+            } catch (err) {
+                console.error("PeerJS 인스턴스 생성 실패:", err);
+                showToast("P2P 서비스 연결 실패", true);
+                return;
+            }
+
+            peerInstance.on('open', (id) => {
+                console.log("P2P Host Open, ID:", id);
+                document.getElementById('p2p-room-code-display').textContent = p2pRoomCode;
+                updateSharedScopesDisplay();
+                updateP2PStatusUI('waiting', '참가자 대기 중');
+                showToast(`공유 코드 [${p2pRoomCode}] 발급 완료`);
+            });
+
+            peerInstance.on('connection', (conn) => {
+                activePeerConn = conn;
+                setupPeerConnectionEvents(conn);
+                // 연결 즉시 현재 데이터 및 스코프를 클라이언트로 전송
+                conn.on('open', () => {
+                    updateP2PStatusUI('connected', '동행자와 실시간 연결됨');
+                    showToast("동행자가 접속했습니다! 데이터 동기화 완료.");
+                    sendFullSyncToPeer();
+                });
+            });
+
+            peerInstance.on('error', (err) => {
+                console.error("Peer 오류:", err);
+                if (err.type === 'unavailable-id') {
+                    // ID 중복 시 재시도
+                    startCreatingP2PRoom();
+                } else {
+                    showToast(`P2P 오류: ${err.type || '연결 실패'}`, true);
+                    updateP2PStatusUI('disconnected');
+                }
+            });
+        }
+
+        function joinP2PRoom() {
+            const input = document.getElementById('p2p-join-code-input');
+            const code = input.value.trim().toUpperCase();
+            if (code.length !== 6) {
+                showToast("6자리 코드를 올바르게 입력해주세요.", true);
+                return;
+            }
+
+            p2pRoomCode = code;
+            p2pRole = 'client';
+            const hostPeerId = `syd-${code.toLowerCase()}`;
+
+            if (peerInstance) peerInstance.destroy();
+
+            try {
+                peerInstance = new Peer({ debug: 1 });
+            } catch (err) {
+                console.error("Peer 생성 실패:", err);
+                showToast("P2P 연결 실패", true);
+                return;
+            }
+
+            peerInstance.on('open', (myId) => {
+                updateP2PStatusUI('waiting', '방장 연결 시도 중...');
+                const conn = peerInstance.connect(hostPeerId, { reliable: true });
+                activePeerConn = conn;
+                setupPeerConnectionEvents(conn);
+
+                conn.on('open', () => {
+                    document.getElementById('p2p-room-code-display').textContent = p2pRoomCode;
+                    updateP2PStatusUI('connected', '방장과 실시간 연결됨');
+                    showToast("성공적으로 공유방에 접속했습니다!");
+                });
+            });
+
+            peerInstance.on('error', (err) => {
+                console.error("클라이언트 연결 오류:", err);
+                showToast("방을 찾을 수 없거나 연결할 수 없습니다.", true);
+                updateP2PStatusUI('disconnected');
+            });
+        }
+
+        function setupPeerConnectionEvents(conn) {
+            conn.on('data', (packet) => {
+                handleIncomingP2PPacket(packet);
+            });
+
+            conn.on('close', () => {
+                showToast("동행자와의 연결이 끊어졌습니다.", true);
+                updateP2PStatusUI('disconnected');
+                activePeerConn = null;
+            });
+        }
+
+        function handleIncomingP2PPacket(packet) {
+            if (!packet || !packet.type) return;
+
+            if (packet.type === 'FULL_SYNC') {
+                if (packet.scopes) sharedScopes = packet.scopes;
+                updateSharedScopesDisplay();
+
+                const d = packet.data;
+                if (sharedScopes.flight && d.flightInfo) {
+                    flightInfo = d.flightInfo;
+                    safeStorage.setItem('sydney_flight', JSON.stringify(flightInfo));
+                    renderFlightInfo();
+                }
+                if (sharedScopes.checklist && d.checklistData) {
+                    checklistData = d.checklistData;
+                    safeStorage.setItem('sydney_checklist', JSON.stringify(checklistData));
+                    renderChecklist();
+                }
+                if (sharedScopes.places && d.placesData) {
+                    placesData = d.placesData;
+                    safeStorage.setItem('sydney_places', JSON.stringify(placesData));
+                    renderPlaces();
+                }
+                if (sharedScopes.schedule && d.schedules) {
+                    schedules = d.schedules;
+                    safeStorage.setItem('sydney_schedules', JSON.stringify(schedules));
+                    renderSchedule();
+                    renderHomeSchedule();
+                }
+                if (sharedScopes.itinerary && d.itineraries) {
+                    for (let key in d.itineraries) {
+                        safeStorage.setItem(`itinerary_${key}`, d.itineraries[key]);
+                    }
+                    renderItinerary();
+                }
+                showAutoSaveIndicator();
+            } else if (packet.type === 'UPDATE') {
+                const { key, value } = packet;
+                if (key === 'checklist' && sharedScopes.checklist) {
+                    checklistData = value;
+                    safeStorage.setItem('sydney_checklist', JSON.stringify(checklistData));
+                    renderChecklist();
+                } else if (key === 'places' && sharedScopes.places) {
+                    placesData = value;
+                    safeStorage.setItem('sydney_places', JSON.stringify(placesData));
+                    renderPlaces();
+                } else if (key === 'schedules' && sharedScopes.schedule) {
+                    schedules = value;
+                    safeStorage.setItem('sydney_schedules', JSON.stringify(schedules));
+                    renderSchedule();
+                    renderHomeSchedule();
+                } else if (key === 'flight' && sharedScopes.flight) {
+                    flightInfo = value;
+                    safeStorage.setItem('sydney_flight', JSON.stringify(flightInfo));
+                    renderFlightInfo();
+                } else if (key && key.startsWith('itinerary_') && sharedScopes.itinerary) {
+                    safeStorage.setItem(key, value);
+                    renderItinerary();
+                }
+                showAutoSaveIndicator();
+            }
+        }
+
+        function broadcastP2PUpdate(key, value) {
+            if (!activePeerConn || !activePeerConn.open) return;
+            activePeerConn.send({
+                type: 'UPDATE',
+                key: key,
+                value: value
+            });
+        }
+
+        function sendFullSyncToPeer() {
+            if (!activePeerConn || !activePeerConn.open) return;
+            const fullData = {
+                flightInfo: flightInfo,
+                checklistData: checklistData,
+                placesData: placesData,
+                schedules: schedules,
+                itineraries: {}
+            };
+            for (let i = 1; i <= 7; i++) {
+                fullData.itineraries[`day${i}`] = safeStorage.getItem(`itinerary_day${i}`) || '';
+            }
+            activePeerConn.send({
+                type: 'FULL_SYNC',
+                scopes: sharedScopes,
+                data: fullData
+            });
+        }
+
+        function updateSharedScopesDisplay() {
+            const el = document.getElementById('p2p-shared-scopes-info');
+            if (!el) return;
+            const names = [];
+            if (sharedScopes.schedule) names.push('일일 스케줄');
+            if (sharedScopes.checklist) names.push('체크리스트');
+            if (sharedScopes.places) names.push('방문 장소');
+            if (sharedScopes.flight) names.push('항공권');
+            if (sharedScopes.itinerary) names.push('러프 일정');
+            el.textContent = `공유 중인 항목: ${names.join(', ') || '없음'}`;
+        }
+
+        function copyRoomCode() {
+            if (!p2pRoomCode) return;
+            const temp = document.createElement('input');
+            temp.value = p2pRoomCode;
+            document.body.appendChild(temp);
+            temp.select();
+            document.execCommand('copy');
+            document.body.removeChild(temp);
+            showToast(`초대 코드 [${p2pRoomCode}]가 복사되었습니다!`);
+        }
+
+        function disconnectP2P() {
+            if (activePeerConn) {
+                activePeerConn.close();
+                activePeerConn = null;
+            }
+            if (peerInstance) {
+                peerInstance.destroy();
+                peerInstance = null;
+            }
+            p2pRoomCode = null;
+            p2pRole = null;
+            updateP2PStatusUI('disconnected');
+            showToast("P2P 연결이 종료되었습니다.");
+        }
+
         /* --- 저장소에서 최신 사용자 데이터 로드 및 파싱 (요구사항 2 반영) --- */
         function loadStoredData() {
             try {
@@ -638,6 +1110,10 @@
                 const success = safeStorage.setItem(key, value);
                 if (success) {
                     showAutoSaveIndicator();
+                    // P2P 연결된 상대방에게도 변경사항 실시간 전송
+                    if (key.startsWith('itinerary_')) {
+                        broadcastP2PUpdate(key, value);
+                    }
                 }
             }, 400);
         }
@@ -970,6 +1446,7 @@
                 date: document.getElementById('fm-date').value
             };
             safeStorage.setItem('sydney_flight', JSON.stringify(flightInfo));
+            broadcastP2PUpdate('flight', flightInfo);
             renderFlightInfo();
             closeFlightEditModal();
             showToast("탑승권 정보가 업데이트 되었습니다.");
@@ -1193,6 +1670,23 @@
             event.target.value = '';
         }
 
+        /* --- 리셋 확인 모달 로직 --- */
+        function openResetConfirmModal() {
+            const modal = document.getElementById('reset-confirm-modal');
+            if (modal) modal.classList.remove('hidden');
+        }
+
+        function closeResetConfirmModal(event) {
+            if (event && event.target.id !== 'reset-confirm-modal') return;
+            const modal = document.getElementById('reset-confirm-modal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        function confirmResetAllData() {
+            closeResetConfirmModal();
+            resetAllData();
+        }
+
         function resetAllData() {
             flightInfo = defaultFlight;
             checklistData = defaultChecklist;
@@ -1244,6 +1738,7 @@
         function toggleChecklist(index, isChecked) {
             checklistData[index].checked = isChecked;
             safeStorage.setItem('sydney_checklist', JSON.stringify(checklistData));
+            broadcastP2PUpdate('checklist', checklistData);
             showAutoSaveIndicator();
         }
 
@@ -1254,6 +1749,7 @@
             
             checklistData.push({ id: 'chk_' + Date.now(), label: val, checked: false });
             safeStorage.setItem('sydney_checklist', JSON.stringify(checklistData));
+            broadcastP2PUpdate('checklist', checklistData);
             input.value = '';
             renderChecklist();
             showAutoSaveIndicator();
@@ -1263,6 +1759,7 @@
         function deleteChecklistItem(index) {
             checklistData.splice(index, 1);
             safeStorage.setItem('sydney_checklist', JSON.stringify(checklistData));
+            broadcastP2PUpdate('checklist', checklistData);
             renderChecklist();
             showAutoSaveIndicator();
         }
@@ -1295,6 +1792,7 @@
             if(!val) return;
             placesData[cat].push(val);
             safeStorage.setItem('sydney_places', JSON.stringify(placesData));
+            broadcastP2PUpdate('places', placesData);
             input.value = '';
             renderPlaces();
             showAutoSaveIndicator();
@@ -1303,6 +1801,7 @@
         function deletePlace(cat, index) {
             placesData[cat].splice(index, 1);
             safeStorage.setItem('sydney_places', JSON.stringify(placesData));
+            broadcastP2PUpdate('places', placesData);
             renderPlaces();
             showAutoSaveIndicator();
         }
@@ -1620,6 +2119,7 @@
             });
 
             safeStorage.setItem('sydney_schedules', JSON.stringify(schedules));
+            broadcastP2PUpdate('schedules', schedules);
             
             placeEl.value = '';
             activityEl.value = '';
@@ -1632,6 +2132,7 @@
         function deleteSchedule(day, id) {
             schedules[`day${day}`] = schedules[`day${day}`].filter(item => item.id !== id);
             safeStorage.setItem('sydney_schedules', JSON.stringify(schedules));
+            broadcastP2PUpdate('schedules', schedules);
             renderSchedule();
             renderHomeSchedule();
         }
