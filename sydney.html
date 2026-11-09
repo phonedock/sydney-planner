@@ -1,0 +1,1383 @@
+<!DOCTYPE html>
+<html lang="ko" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>시드니 여행 계획 (5박 7일)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3b82f6',
+                        darkBg: '#0f172a',
+                        darkCard: '#1e293b'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom Styles & Scrollbar */
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; -webkit-tap-highlight-color: transparent; }
+        .tab-content { display: none; animation: fadeIn 0.3s ease-in-out; }
+        .tab-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* Checkbox Styling */
+        .checklist-cb:checked + div, .checklist-cb:checked + label { text-decoration: line-through; color: #9ca3af; }
+        
+        /* Map Container */
+        #map-container { height: 50vh; min-height: 350px; width: 100%; border-radius: 0.75rem; overflow: hidden; }
+        
+        /* Hide Scrollbar for tabs */
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* App Layout Container for iframe & Google Sites */
+        html, body { height: 100%; overflow: hidden; }
+        #app-viewport { height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
+        #main-scroll-area { flex: 1 1 0%; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: 5.5rem; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900 dark:bg-darkBg dark:text-gray-100 transition-colors duration-300">
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed top-4 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded-full shadow-lg transition-opacity duration-300 opacity-0 pointer-events-none z-[100] text-sm font-medium"></div>
+
+    <!-- Auto-save Floating Badge -->
+    <div id="autosave-indicator" class="fixed top-3.5 right-4 z-[99] flex items-center gap-1.5 bg-emerald-600/90 text-white text-xs px-2.5 py-1 rounded-full shadow-md backdrop-blur-sm transition-all duration-300 opacity-0 pointer-events-none translate-y-[-6px]">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+        <span>자동 저장됨</span>
+    </div>
+
+    <div id="app-viewport">
+        <!-- Header (Mobile Optimized) -->
+        <header class="bg-white dark:bg-darkCard shadow-sm sticky top-0 z-40 transition-colors duration-300 flex-shrink-0">
+            <div class="px-4 py-3 flex justify-center items-center">
+                <h1 class="text-xl font-bold text-blue-600 dark:text-blue-400 flex items-center gap-2 tracking-tight">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    Sydney Planner
+                </h1>
+            </div>
+        </header>
+
+        <div id="main-scroll-area">
+            <main class="max-w-xl mx-auto px-4 sm:px-6 py-6 overflow-x-hidden">
+                <!-- TAB 1: 홈 (Home) -->
+                <section id="tab-home" class="tab-content active">
+                    <!-- 탑승권 (Boarding Pass) 리스트 컨테이너 (단일 컨테이너) -->
+                    <div id="flight-tickets-container" class="space-y-4 mb-6">
+                        <!-- JS에서 동적 생성됨 (출발편 / 귀국편) -->
+                    </div>
+
+                    <!-- 날씨 UI (Open-Meteo 실제 기상 동기화, 단일 컨테이너) -->
+                    <div class="relative bg-white dark:bg-darkCard rounded-2xl shadow-sm mb-6 pb-2">
+                        <div class="px-4 pt-4 pb-2 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center">
+                            <h2 class="text-sm font-bold flex items-center gap-2">
+                                ⛅ 시드니 실시간 일기예보 <span class="text-xs font-normal text-gray-400">(좌우 스와이프)</span>
+                            </h2>
+                            <button onclick="fetchSydneyWeather(true)" class="text-[11px] text-blue-500 hover:text-blue-600 dark:text-blue-400 flex items-center gap-1 font-medium">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                                새로고침
+                            </button>
+                        </div>
+                        <div class="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide w-full p-4 gap-4" id="weather-carousel">
+                            <div class="text-sm text-gray-400 text-center w-full py-4">날씨 데이터를 불러오는 중...</div>
+                        </div>
+                    </div>
+
+                    <!-- 전체 스케줄 요약 -->
+                    <div class="bg-white dark:bg-darkCard rounded-2xl shadow-sm p-5 mb-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-lg font-bold flex items-center gap-2">
+                                <svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                나의 여행 스케줄
+                            </h2>
+                            <button onclick="switchTab('schedule')" class="text-xs text-blue-600 dark:text-blue-400 font-semibold hover:underline">수정하기</button>
+                        </div>
+                        <div id="home-schedule-summary" class="space-y-3">
+                            <!-- JS에서 렌더링 -->
+                        </div>
+                    </div>
+
+                    <!-- 준비 목록 (수정 가능) -->
+                    <div class="bg-white dark:bg-darkCard rounded-2xl shadow-sm p-5 mb-6">
+                        <h2 class="text-lg font-bold mb-4 flex items-center gap-2">
+                            <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            여행 전 준비목록
+                        </h2>
+                        <ul class="space-y-3 mb-4" id="checklist-container">
+                            <!-- JavaScript로 동적 생성됨 -->
+                        </ul>
+                        <div class="flex gap-2">
+                            <input type="text" id="new-chk-input" placeholder="새로운 할 일 추가" class="flex-1 text-sm border border-gray-300 rounded-lg p-2 dark:bg-gray-800 dark:border-gray-600 dark:text-white outline-none focus:border-blue-500 bg-gray-50">
+                            <button onclick="addChecklistItem()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-bold shadow transition-colors">추가</button>
+                        </div>
+                    </div>
+
+                    <!-- 방문 장소 분류 (수정 가능) -->
+                    <div class="flex justify-between items-end mb-3 px-1">
+                        <h2 class="text-lg font-bold">방문 예정 장소</h2>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                        <!-- 명소 -->
+                        <div class="bg-white dark:bg-darkCard rounded-2xl shadow-sm p-4 border-l-4 border-blue-400 flex flex-col h-full">
+                            <h3 class="font-semibold text-blue-600 dark:text-blue-400 mb-3">📍 가야하는 곳</h3>
+                            <div id="places-sights" class="flex flex-wrap gap-2 mb-4 flex-1 content-start"></div>
+                            <div class="flex gap-2 mt-auto">
+                                <input type="text" id="new-place-sights" placeholder="명소 추가" class="flex-1 text-xs border border-gray-300 rounded-lg p-2 dark:bg-gray-800 dark:border-gray-600 dark:text-white outline-none focus:border-blue-500 bg-gray-50">
+                                <button onclick="addPlace('sights')" class="bg-blue-50 dark:bg-gray-700 text-blue-600 dark:text-blue-400 px-3 py-1.5 rounded-lg text-xs font-bold border border-blue-200 dark:border-gray-600">+</button>
+                            </div>
+                        </div>
+                        <!-- 음식/카페 -->
+                        <div class="bg-white dark:bg-darkCard rounded-2xl shadow-sm p-4 border-l-4 border-orange-400 flex flex-col h-full">
+                            <h3 class="font-semibold text-orange-600 dark:text-orange-400 mb-3">☕ 음식점 & 카페</h3>
+                            <div id="places-food" class="flex flex-wrap gap-2 mb-4 flex-1 content-start"></div>
+                            <div class="flex gap-2 mt-auto">
+                                <input type="text" id="new-place-food" placeholder="맛집 추가" class="flex-1 text-xs border border-gray-300 rounded-lg p-2 dark:bg-gray-800 dark:border-gray-600 dark:text-white outline-none focus:border-blue-500 bg-gray-50">
+                                <button onclick="addPlace('food')" class="bg-orange-50 dark:bg-gray-700 text-orange-600 dark:text-orange-400 px-3 py-1.5 rounded-lg text-xs font-bold border border-orange-200 dark:border-gray-600">+</button>
+                            </div>
+                        </div>
+                        <!-- 쇼핑 -->
+                        <div class="bg-white dark:bg-darkCard rounded-2xl shadow-sm p-4 border-l-4 border-purple-400 sm:col-span-2 flex flex-col h-full">
+                            <h3 class="font-semibold text-purple-600 dark:text-purple-400 mb-3">🛍️ 쇼핑 & 마켓</h3>
+                            <div id="places-shopping" class="flex flex-wrap gap-2 mb-4 flex-1 content-start"></div>
+                            <div class="flex gap-2 mt-auto">
+                                <input type="text" id="new-place-shopping" placeholder="쇼핑 장소 추가" class="flex-1 text-xs border border-gray-300 rounded-lg p-2 dark:bg-gray-800 dark:border-gray-600 dark:text-white outline-none focus:border-blue-500 bg-gray-50">
+                                <button onclick="addPlace('shopping')" class="bg-purple-50 dark:bg-gray-700 text-purple-600 dark:text-purple-400 px-3 py-1.5 rounded-lg text-xs font-bold border border-purple-200 dark:border-gray-600">+</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 간략 일정표 -->
+                    <h2 class="text-lg font-bold mb-3 px-1">🗓️ 일정 러프 스케치</h2>
+                    <div class="space-y-3" id="itinerary-container">
+                        <!-- JS에서 생성 -->
+                    </div>
+                </section>
+
+                <!-- TAB 2: 스케줄 (Schedule) -->
+                <section id="tab-schedule" class="tab-content">
+                    <div class="mb-4">
+                        <h2 class="text-xl font-bold flex items-center gap-2">
+                            일일 상세 스케줄
+                        </h2>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">시간과 장소를 5분 단위로 상세하게 계획해 보세요.</p>
+                    </div>
+                    
+                    <!-- 일자별 탭 (Day 1 ~ Day 7) -->
+                    <div class="flex overflow-x-auto space-x-2 mb-5 pb-2 scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0" id="day-tabs-container">
+                        <!-- JS에서 생성됨 -->
+                    </div>
+
+                    <div id="schedule-container" class="space-y-4">
+                        <!-- JS에서 선택된 요일만 생성됨 -->
+                    </div>
+                </section>
+
+                <!-- TAB 3: 지도 (Map) -->
+                <section id="tab-map" class="tab-content">
+                    <div class="bg-white dark:bg-darkCard rounded-2xl shadow-sm overflow-hidden mb-4 border border-gray-100 dark:border-gray-800">
+                        <div class="p-4 border-b border-gray-100 dark:border-gray-800">
+                            <h2 class="text-lg font-bold flex items-center gap-2">
+                                <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                                시드니 중심부 지도
+                            </h2>
+                        </div>
+                        <div id="map-container" class="bg-gray-200 dark:bg-gray-700 w-full h-[60vh]">
+                            <!-- Google Maps 임베드 -->
+                            <iframe width="100%" height="100%" frameborder="0" scrolling="no" marginheight="0" marginwidth="0" src="https://maps.google.com/maps?q=Sydney&t=&z=13&ie=UTF8&iwloc=&output=embed" style="border:0;" allowfullscreen></iframe>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- TAB 4: 추천 (Recommendations) -->
+                <section id="tab-recs" class="tab-content">
+                    <div class="mb-4">
+                        <h2 class="text-xl font-bold flex items-center gap-2">
+                            맛집 & 쇼핑 리스트
+                        </h2>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">방문할 곳들의 메모를 남기고 구글맵으로 바로 검색해 보세요.</p>
+                    </div>
+                    <div class="space-y-3" id="recs-container">
+                        <!-- JS에서 생성 -->
+                    </div>
+                </section>
+
+                <!-- TAB 5: 설정 (Settings) -->
+                <section id="tab-settings" class="tab-content">
+                    <div class="space-y-4">
+                        <!-- 앱 설정 -->
+                        <div class="bg-white dark:bg-darkCard rounded-2xl shadow-sm p-5">
+                            <h2 class="text-lg font-bold mb-4">앱 설정</h2>
+                            
+                            <!-- 테마 토글 -->
+                            <div class="flex justify-between items-center p-2">
+                                <div>
+                                    <p class="font-medium text-base">다크 모드</p>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">눈이 편안한 어두운 테마</p>
+                                </div>
+                                <button id="theme-toggle" class="relative inline-flex h-7 w-12 items-center rounded-full bg-gray-300 dark:bg-blue-600 transition-colors focus:outline-none">
+                                    <span class="sr-only">Toggle dark mode</span>
+                                    <span id="theme-toggle-knob" class="inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform translate-x-1 dark:translate-x-6"></span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 개인별 데이터 백업 및 복원 -->
+                        <div class="bg-white dark:bg-darkCard rounded-2xl shadow-sm p-5">
+                            <h2 class="text-lg font-bold mb-1 flex items-center gap-2">
+                                💾 개인별 데이터 관리
+                            </h2>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">기기를 변경하거나 친구와 일정을 공유할 때 파일로 저장하고 불러올 수 있습니다.</p>
+                            
+                            <div class="grid grid-cols-2 gap-3 mb-3">
+                                <button onclick="exportUserData()" class="flex items-center justify-center gap-2 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 p-2.5 rounded-xl text-xs font-bold hover:bg-blue-100 transition">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                                    내 데이터 내보내기
+                                </button>
+                                <label for="import-file-input" class="cursor-pointer flex items-center justify-center gap-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 p-2.5 rounded-xl text-xs font-bold hover:bg-indigo-100 transition text-center">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                                    데이터 가져오기
+                                </label>
+                                <input type="file" id="import-file-input" accept=".json" class="hidden" onchange="importUserData(event)">
+                            </div>
+
+                            <button onclick="resetAllData()" class="w-full text-center text-xs text-red-500 dark:text-red-400 hover:underline py-2">
+                                모든 여행 데이터를 초기 상태로 리셋
+                            </button>
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </div>
+
+        <!-- Bottom Navigation (Fixed at bottom of viewport) -->
+        <nav class="fixed bottom-0 left-0 right-0 bg-white dark:bg-darkCard border-t border-gray-200 dark:border-gray-800 z-50 flex-shrink-0">
+            <div class="flex justify-around items-center h-16 max-w-md mx-auto">
+                <button onclick="switchTab('home')" id="btn-home" class="tab-btn flex flex-col items-center justify-center w-full h-full space-y-1 text-blue-600 dark:text-blue-400">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                    <span class="text-[10px] font-medium">홈</span>
+                </button>
+                <button onclick="switchTab('schedule')" id="btn-schedule" class="tab-btn flex flex-col items-center justify-center w-full h-full space-y-1 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    <span class="text-[10px] font-medium">스케줄</span>
+                </button>
+                <button onclick="switchTab('map')" id="btn-map" class="tab-btn flex flex-col items-center justify-center w-full h-full space-y-1 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path></svg>
+                    <span class="text-[10px] font-medium">지도</span>
+                </button>
+                <button onclick="switchTab('recs')" id="btn-recs" class="tab-btn flex flex-col items-center justify-center w-full h-full space-y-1 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path></svg>
+                    <span class="text-[10px] font-medium">추천</span>
+                </button>
+                <button onclick="switchTab('settings')" id="btn-settings" class="tab-btn flex flex-col items-center justify-center w-full h-full space-y-1 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                    <span class="text-[10px] font-medium">설정</span>
+                </button>
+            </div>
+        </nav>
+    </div>
+
+    <!-- Modal: 항공권 정보 수정 -->
+    <div id="flight-edit-modal" class="fixed inset-0 bg-black/60 z-[100] hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white dark:bg-darkCard w-full max-w-sm rounded-2xl shadow-xl overflow-hidden transform transition-all">
+            <div class="p-5 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center">
+                <h3 id="fm-title" class="font-bold text-lg">✈️ 탑승권 정보 수정</h3>
+                <button onclick="closeFlightEditModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <div class="p-5 space-y-4">
+                <input type="hidden" id="fm-type">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">항공편명</label>
+                    <input type="text" id="fm-flight" class="w-full text-sm border border-gray-300 rounded-lg p-2 dark:bg-gray-800 dark:border-gray-600 dark:text-white outline-none focus:border-blue-500">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">출발지 (코드)</label>
+                        <input type="text" id="fm-origin" class="w-full text-sm border border-gray-300 rounded-lg p-2 dark:bg-gray-800 dark:border-gray-600 dark:text-white outline-none focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">출발지 (이름)</label>
+                        <input type="text" id="fm-origin-name" class="w-full text-sm border border-gray-300 rounded-lg p-2 dark:bg-gray-800 dark:border-gray-600 dark:text-white outline-none focus:border-blue-500">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">도착지 (코드)</label>
+                        <input type="text" id="fm-dest" class="w-full text-sm border border-gray-300 rounded-lg p-2 dark:bg-gray-800 dark:border-gray-600 dark:text-white outline-none focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">도착지 (이름)</label>
+                        <input type="text" id="fm-dest-name" class="w-full text-sm border border-gray-300 rounded-lg p-2 dark:bg-gray-800 dark:border-gray-600 dark:text-white outline-none focus:border-blue-500">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">탑승일 (날짜)</label>
+                    <input type="date" id="fm-date" class="w-full text-sm border border-gray-300 rounded-lg p-2 dark:bg-gray-800 dark:border-gray-600 dark:text-white outline-none focus:border-blue-500">
+                </div>
+            </div>
+            <div class="p-5 border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 flex justify-end">
+                <button onclick="saveFlightEditModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg text-sm font-bold shadow-md transition-colors">저장하기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: 항공권 캡처본 보기 및 업로드 -->
+    <div id="ticket-image-modal" class="fixed inset-0 bg-black/80 z-[110] hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white dark:bg-darkCard w-full max-w-md rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="p-4 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center bg-gray-50 dark:bg-gray-900">
+                <h3 id="ticket-img-title" class="font-bold text-lg text-gray-800 dark:text-white">🎟️ 탑승권 캡처본</h3>
+                <button onclick="closeTicketImageModal()" class="text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 bg-gray-200 dark:bg-gray-700 rounded-full p-1.5">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <div class="flex-1 overflow-y-auto p-4 flex flex-col items-center justify-center min-h-[300px] bg-gray-100 dark:bg-gray-800">
+                <p id="no-ticket-img-text" class="text-gray-400 text-sm font-medium mb-4 hidden">등록된 캡처본이 없습니다.</p>
+                <img id="ticket-img-preview" src="" alt="탑승권 이미지" class="max-w-full h-auto rounded-lg shadow-sm hidden">
+            </div>
+            <div class="p-4 border-t border-gray-100 dark:border-gray-800 flex justify-between gap-3 bg-white dark:bg-darkCard">
+                <button onclick="removeTicketImage()" class="px-4 py-2 bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400 rounded-lg text-sm font-semibold hover:bg-red-100 transition flex-1">삭제</button>
+                <label for="ticket-image-upload" class="cursor-pointer text-center px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition flex-1">
+                    이미지 업로드
+                </label>
+                <input type="file" id="ticket-image-upload" accept="image/*" class="hidden" onchange="handleTicketImageUpload(event)">
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: 날씨 상세정보 -->
+    <div id="weather-detail-modal" class="fixed inset-0 bg-black/60 z-[100] hidden flex items-center justify-center p-4 backdrop-blur-sm" onclick="closeWeatherDetail(event)">
+        <div class="bg-white dark:bg-darkCard w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden transform transition-all" onclick="event.stopPropagation()">
+            <div class="bg-gradient-to-br from-blue-400 to-blue-600 p-6 text-white text-center relative">
+                <button onclick="closeWeatherDetail()" class="absolute top-4 right-4 bg-black/20 hover:bg-black/30 p-1.5 rounded-full transition">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+                <h3 id="wd-date" class="text-lg font-medium opacity-90 mb-1">날짜</h3>
+                <div class="text-6xl my-3" id="wd-icon">☀️</div>
+                <div class="text-4xl font-black mb-1" id="wd-temp">24°C</div>
+                <p class="text-lg font-medium opacity-90" id="wd-desc">맑음</p>
+            </div>
+            <div class="p-5 space-y-4 max-h-[50vh] overflow-y-auto">
+                <div>
+                    <h4 class="text-xs font-bold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide">00시 ~ 23시 시간대별 기온</h4>
+                    <div id="wd-hourly-scroll" class="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                        <!-- JS에서 24시간 상세 날씨 채움 -->
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3 pt-2 border-t border-gray-100 dark:border-gray-800">
+                    <div class="bg-blue-50 dark:bg-blue-900/20 p-2.5 rounded-xl">
+                        <p class="text-[11px] text-gray-500 dark:text-gray-400 mb-0.5">최저 / 최고</p>
+                        <p class="text-sm font-bold text-gray-800 dark:text-gray-200" id="wd-minmax">-</p>
+                    </div>
+                    <div class="bg-blue-50 dark:bg-blue-900/20 p-2.5 rounded-xl">
+                        <p class="text-[11px] text-gray-500 dark:text-gray-400 mb-0.5">최대 강수확률</p>
+                        <p class="text-sm font-bold text-gray-800 dark:text-gray-200" id="wd-rain">-</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Logic -->
+    <script>
+        /* --- 기본 데이터 구조 (출발/귀국 분리) --- */
+        const defaultFlight = { 
+            departure: { flight: 'KE401', origin: 'ICN', originName: '인천', dest: 'SYD', destName: '시드니', date: '2026-11-15', image: null },
+            arrival: { flight: 'KE402', origin: 'SYD', originName: '시드니', dest: 'ICN', destName: '인천', date: '2026-11-21', image: null }
+        };
+        
+        const defaultChecklist = [
+            { id: 'chk1', label: '호주 유심 구매 및 수령', checked: false },
+            { id: 'chk2', label: '교통카드(트래블월렛 등) 태그리스 확인', checked: false },
+            { id: 'chk3', label: '비자(ETA) 발급', checked: true },
+            { id: 'chk4', label: '오지패스 짐보관 (시드니면세점)', checked: false }
+        ];
+
+        const defaultPlaces = {
+            sights: ['옵저버토리힐', '본다이비치', '블루마운틴', '페더데일 동물원', '루나파크', '패디스마켓', '시드니대학교', '맥쿼리포인트', '로열보태닉가든', '하이드파크', '맨리해변'],
+            food: ['요치', '요미스라이스', '싱글오 (Single O)', '티카 (Tikka)', 'Campos coffee', 'Lune coffee'],
+            shopping: ['QVB', '스트랜드몰', '달링하버', '서리힐스 (크라운스트리트)', '파타고니아 시드니', '코튼 온 (Cotton On)', '브랜디멜빌', 'Target Australia', 'Stussy Sydney', '서큘러키', '패딩턴마켓']
+        };
+
+        const recommendations = [
+            { name: '요치', type: '음식점/카페' }, { name: '요미스라이스', type: '음식점/카페' },
+            { name: '싱글오 (Single O)', type: '음식점/카페' }, { name: 'QVB', type: '쇼핑/마켓' },
+            { name: '파타고니아 시드니', type: '쇼핑/마켓' }, { name: '패딩턴마켓', type: '쇼핑/마켓' }
+        ];
+
+        /* --- 安全한 localStorage Wrapper --- */
+        const safeStorage = {
+            getItem(key) {
+                try {
+                    return localStorage.getItem(key);
+                } catch (e) {
+                    console.error(`[localStorage.getItem 오류] key="${key}":`, e);
+                    return null;
+                }
+            },
+            setItem(key, value) {
+                try {
+                    localStorage.setItem(key, value);
+                    console.log(`[저장된 데이터] key="${key}":`, value);
+                    return true;
+                } catch (e) {
+                    console.error(`[localStorage.setItem 오류] key="${key}":`, e);
+                    return false;
+                }
+            },
+            removeItem(key) {
+                try {
+                    localStorage.removeItem(key);
+                    console.log(`[삭제된 데이터] key="${key}"`);
+                } catch (e) {
+                    console.error(`[localStorage.removeItem 오류] key="${key}":`, e);
+                }
+            },
+            clear() {
+                try {
+                    localStorage.clear();
+                    console.log('[localStorage] 전체 데이터 초기화 완료');
+                } catch (e) {
+                    console.error('[localStorage.clear 오류]:', e);
+                }
+            }
+        };
+
+        /* --- 전역 상태 변수 선언 --- */
+        let flightInfo = defaultFlight;
+        let checklistData = defaultChecklist;
+        let placesData = defaultPlaces;
+        let schedules = {};
+        let currentDayTab = 1;
+        let realWeatherForecast = [];
+
+        /* --- 저장소에서 최신 사용자 데이터 로드 및 파싱 (요구사항 2 반영) --- */
+        function loadStoredData() {
+            try {
+                const storedFlight = safeStorage.getItem('sydney_flight');
+                if (storedFlight) {
+                    const parsed = JSON.parse(storedFlight);
+                    if (parsed && parsed.departure) flightInfo = parsed;
+                } else {
+                    flightInfo = defaultFlight;
+                }
+
+                const storedChecklist = safeStorage.getItem('sydney_checklist');
+                if (storedChecklist) {
+                    const parsed = JSON.parse(storedChecklist);
+                    if (Array.isArray(parsed)) checklistData = parsed;
+                } else {
+                    checklistData = defaultChecklist;
+                }
+
+                const storedPlaces = safeStorage.getItem('sydney_places');
+                if (storedPlaces) {
+                    const parsed = JSON.parse(storedPlaces);
+                    if (parsed && parsed.sights) placesData = parsed;
+                } else {
+                    placesData = defaultPlaces;
+                }
+
+                const storedSchedules = safeStorage.getItem('sydney_schedules');
+                if (storedSchedules) {
+                    const parsed = JSON.parse(storedSchedules);
+                    if (parsed && typeof parsed === 'object') schedules = parsed;
+                } else {
+                    schedules = {};
+                }
+
+                console.log('🔄 [최신 데이터 로드 완료]:', { flightInfo, checklistData, placesData, schedules });
+            } catch (err) {
+                console.error('❌ [저장소 데이터 파싱 중 오류]:', err);
+            }
+        }
+
+        /* --- 디바운스 및 자동 저장 인디케이터 --- */
+        let autoSaveTimer = null;
+        let autoSaveToastTimer = null;
+
+        function showAutoSaveIndicator() {
+            const indicator = document.getElementById('autosave-indicator');
+            if (!indicator) return;
+            indicator.classList.remove('opacity-0', 'translate-y-[-6px]');
+            clearTimeout(autoSaveToastTimer);
+            autoSaveToastTimer = setTimeout(() => {
+                indicator.classList.add('opacity-0', 'translate-y-[-6px]');
+            }, 1200);
+        }
+
+        function debouncedSave(key, value) {
+            clearTimeout(autoSaveTimer);
+            autoSaveTimer = setTimeout(() => {
+                const success = safeStorage.setItem(key, value);
+                if (success) {
+                    showAutoSaveIndicator();
+                }
+            }, 400);
+        }
+
+        /* --- 유틸리티 함수 --- */
+        function showToast(msg, isError = false) {
+            const toast = document.getElementById('toast');
+            if (!toast) return;
+            toast.textContent = msg;
+            toast.className = `fixed top-4 left-1/2 transform -translate-x-1/2 px-5 py-2.5 rounded-full shadow-lg transition-opacity duration-300 z-[100] text-sm font-bold text-white ${isError ? 'bg-red-500' : 'bg-gray-800 dark:bg-gray-100 dark:text-gray-900'}`;
+            toast.classList.remove('opacity-0');
+            setTimeout(() => toast.classList.add('opacity-0'), 2000);
+        }
+
+        function formatKoreanTime(timeStr) {
+            if (!timeStr) return '';
+            const [hourStr, minStr] = timeStr.split(':');
+            let h = parseInt(hourStr, 10);
+            const ampm = h >= 12 ? '오후' : '오전';
+            if (h === 0) h = 12;
+            else if (h > 12) h -= 12;
+            return `${ampm} ${h}:${minStr}`;
+        }
+
+        /* --- 탭 전환 로직 --- */
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            const targetTab = document.getElementById(`tab-${tabId}`);
+            if (targetTab) targetTab.classList.add('active');
+
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('text-blue-600', 'dark:text-blue-400');
+                btn.classList.add('text-gray-500', 'dark:text-gray-400');
+            });
+            
+            const activeBtn = document.getElementById(`btn-${tabId}`);
+            if (activeBtn) {
+                activeBtn.classList.remove('text-gray-500', 'dark:text-gray-400');
+                activeBtn.classList.add('text-blue-600', 'dark:text-blue-400');
+            }
+
+            safeStorage.setItem('sydney_active_tab', tabId);
+            if(tabId === 'home') renderHomeSchedule();
+            const scrollArea = document.getElementById('main-scroll-area');
+            if (scrollArea) scrollArea.scrollTop = 0;
+        }
+
+        /* --- 항공권 & 날씨 위젯 로직 --- */
+        function renderFlightInfo() {
+            const container = document.getElementById('flight-tickets-container');
+            if (!container) return;
+            container.innerHTML = `
+                ${createTicketHTML('departure', flightInfo.departure, '🛫 가는 편 (출발)', 'from-blue-600 to-indigo-800')}
+                ${createTicketHTML('arrival', flightInfo.arrival, '🛬 오는 편 (귀국)', 'from-indigo-600 to-purple-800')}
+            `;
+            fetchSydneyWeather();
+        }
+
+        function createTicketHTML(type, data, label, bgGradient) {
+            const d = new Date(data.date);
+            const dateStr = !isNaN(d) ? `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}` : data.date;
+            
+            return `
+            <div class="bg-gradient-to-br ${bgGradient} text-white rounded-3xl shadow-lg p-5 relative overflow-hidden group cursor-pointer hover:shadow-xl transition-shadow" onclick="openTicketImageModal('${type}')">
+                <button onclick="event.stopPropagation(); openFlightEditModal('${type}')" class="absolute top-4 right-4 bg-white/20 hover:bg-white/30 p-2 rounded-full backdrop-blur-sm transition z-10">
+                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                </button>
+                <div class="absolute top-0 right-0 w-32 h-32 bg-white opacity-5 rounded-full -mr-10 -mt-10"></div>
+                
+                <div class="flex justify-between items-center border-b border-white/20 pb-4 mb-4">
+                    <div class="flex flex-col">
+                        <span class="text-xs text-blue-100 font-medium">${label}</span>
+                        <span class="text-2xl font-bold tracking-wider">${data.flight}</span>
+                    </div>
+                </div>
+                
+                <div class="flex justify-between items-center">
+                    <div class="text-center w-1/3">
+                        <span class="block text-3xl font-black">${data.origin}</span>
+                        <span class="block text-xs text-blue-100 mt-1">${data.originName}</span>
+                    </div>
+                    <div class="flex-1 px-2 flex flex-col items-center">
+                        <svg class="w-6 h-6 text-white/50 transform rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 19V6m0 0l-8 8m8-8l8 8"></path></svg>
+                        <div class="w-full border-t-2 border-dashed border-white/30 my-1"></div>
+                        <span class="text-[10px] text-blue-100 mt-1">${dateStr}</span>
+                    </div>
+                    <div class="text-center w-1/3">
+                        <span class="block text-3xl font-black">${data.dest}</span>
+                        <span class="block text-xs text-blue-100 mt-1">${data.destName}</span>
+                    </div>
+                </div>
+                <div class="mt-4 text-center text-xs text-white/60 flex items-center justify-center gap-1">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    클릭하여 캡처본 보기
+                </div>
+            </div>
+            `;
+        }
+
+        /* --- 캡처본 모달 및 업로드 --- */
+        let currentTicketType = null;
+        function openTicketImageModal(type) {
+            currentTicketType = type;
+            const data = flightInfo[type];
+            document.getElementById('ticket-img-title').innerText = type === 'departure' ? '🛫 가는 편 캡처본' : '🛬 오는 편 캡처본';
+            
+            const imgPreview = document.getElementById('ticket-img-preview');
+            const noImgText = document.getElementById('no-ticket-img-text');
+            
+            if (data.image) {
+                imgPreview.src = data.image;
+                imgPreview.classList.remove('hidden');
+                noImgText.classList.add('hidden');
+            } else {
+                imgPreview.src = '';
+                imgPreview.classList.add('hidden');
+                noImgText.classList.remove('hidden');
+            }
+            
+            document.getElementById('ticket-image-modal').classList.remove('hidden');
+        }
+
+        function closeTicketImageModal() {
+            document.getElementById('ticket-image-modal').classList.add('hidden');
+        }
+
+        function handleTicketImageUpload(event) {
+            const file = event.target.files[0];
+            if(!file || !currentTicketType) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const MAX_WIDTH = 800; 
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > MAX_WIDTH) {
+                        height *= MAX_WIDTH / width;
+                        width = MAX_WIDTH;
+                    }
+                    
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+
+                    flightInfo[currentTicketType].image = dataUrl;
+                    const saved = safeStorage.setItem('sydney_flight', JSON.stringify(flightInfo));
+                    
+                    if (saved) {
+                        document.getElementById('ticket-img-preview').src = dataUrl;
+                        document.getElementById('ticket-img-preview').classList.remove('hidden');
+                        document.getElementById('no-ticket-img-text').classList.add('hidden');
+                        showToast("캡처 이미지가 저장되었습니다.");
+                    } else {
+                        showToast("저장소 용량 한도로 이미지 저장에 실패했습니다.", true);
+                    }
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function removeTicketImage() {
+            if(!currentTicketType) return;
+            flightInfo[currentTicketType].image = null;
+            safeStorage.setItem('sydney_flight', JSON.stringify(flightInfo));
+            
+            document.getElementById('ticket-image-upload').value = '';
+            document.getElementById('ticket-img-preview').src = '';
+            document.getElementById('ticket-img-preview').classList.add('hidden');
+            document.getElementById('no-ticket-img-text').classList.remove('hidden');
+            
+            showToast("이미지가 삭제되었습니다.");
+        }
+
+        /* --- 항공권 수정 모달 --- */
+        function openFlightEditModal(type) {
+            const data = flightInfo[type];
+            document.getElementById('fm-type').value = type;
+            document.getElementById('fm-title').innerText = type === 'departure' ? '🛫 가는 편 정보 수정' : '🛬 오는 편 정보 수정';
+            
+            document.getElementById('fm-flight').value = data.flight || '';
+            document.getElementById('fm-origin').value = data.origin || '';
+            document.getElementById('fm-origin-name').value = data.originName || '';
+            document.getElementById('fm-dest').value = data.dest || '';
+            document.getElementById('fm-dest-name').value = data.destName || '';
+            document.getElementById('fm-date').value = data.date || '';
+            
+            document.getElementById('flight-edit-modal').classList.remove('hidden');
+        }
+
+        function closeFlightEditModal() {
+            document.getElementById('flight-edit-modal').classList.add('hidden');
+        }
+
+        function saveFlightEditModal() {
+            const type = document.getElementById('fm-type').value;
+            flightInfo[type] = {
+                ...flightInfo[type],
+                flight: document.getElementById('fm-flight').value,
+                origin: document.getElementById('fm-origin').value.toUpperCase(),
+                originName: document.getElementById('fm-origin-name').value,
+                dest: document.getElementById('fm-dest').value.toUpperCase(),
+                destName: document.getElementById('fm-dest-name').value,
+                date: document.getElementById('fm-date').value
+            };
+            safeStorage.setItem('sydney_flight', JSON.stringify(flightInfo));
+            renderFlightInfo();
+            closeFlightEditModal();
+            showToast("탑승권 정보가 업데이트 되었습니다.");
+        }
+
+        /* --- 시드니 실제 날씨 API 연동 (Open-Meteo) --- */
+        const WMO_CODE_MAP = {
+            0: { desc: '맑음', icon: '☀️' },
+            1: { desc: '대체로 맑음', icon: '🌤️' },
+            2: { desc: '구름 조금', icon: '⛅' },
+            3: { desc: '흐림', icon: '☁️' },
+            45: { desc: '안개', icon: '🌫️' },
+            48: { desc: '안개', icon: '🌫️' },
+            51: { desc: '이슬비', icon: '🌦️' },
+            53: { desc: '이슬비', icon: '🌦️' },
+            55: { desc: '이슬비', icon: '🌧️' },
+            61: { desc: '약한 비', icon: '🌦️' },
+            63: { desc: '비', icon: '🌧️' },
+            65: { desc: '강한 비', icon: '🌧️' },
+            80: { desc: '소나기', icon: '🌦️' },
+            81: { desc: '소나기', icon: '🌧️' },
+            82: { desc: '강한 소나기', icon: '⛈️' },
+            95: { desc: '뇌우', icon: '⛈️' }
+        };
+
+        function getWmoInfo(code) {
+            return WMO_CODE_MAP[code] || { desc: '구름', icon: '⛅' };
+        }
+
+        async function fetchSydneyWeather(forceToast = false) {
+            try {
+                const url = `https://api.open-meteo.com/v1/forecast?latitude=-33.8688&longitude=151.2093&hourly=temperature_2m,weather_code,precipitation_probability&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=Australia%2FSydney&forecast_days=7`;
+                const res = await fetch(url);
+                if (!res.ok) throw new Error('Weather API Response Failed');
+                const data = await res.json();
+
+                const parsed = [];
+                const daily = data.daily;
+                const hourly = data.hourly;
+
+                for (let i = 0; i < daily.time.length; i++) {
+                    const dateStr = daily.time[i];
+                    const wmo = getWmoInfo(daily.weather_code[i]);
+                    
+                    const hours = [];
+                    for (let h = 0; h < hourly.time.length; h++) {
+                        if (hourly.time[h].startsWith(dateStr)) {
+                            const timePart = hourly.time[h].split('T')[1].substring(0, 5);
+                            hours.push({
+                                time: timePart,
+                                temp: Math.round(hourly.temperature_2m[h]),
+                                pop: hourly.precipitation_probability[h],
+                                icon: getWmoInfo(hourly.weather_code[h]).icon
+                            });
+                        }
+                    }
+
+                    parsed.push({
+                        date: dateStr,
+                        maxTemp: Math.round(daily.temperature_2m_max[i]),
+                        minTemp: Math.round(daily.temperature_2m_min[i]),
+                        desc: wmo.desc,
+                        icon: wmo.icon,
+                        pop: daily.precipitation_probability_max[i] || 0,
+                        hourly: hours
+                    });
+                }
+
+                realWeatherForecast = parsed;
+                renderWeatherCarousel();
+                if(forceToast) showToast("시드니 실시간 날씨 동기화 완료");
+            } catch (err) {
+                console.error("Weather fetch failed, falling back:", err);
+                renderWeatherFallback();
+                if(forceToast) showToast("날씨 서버 연결 실패 (대체 예보 사용)", true);
+            }
+        }
+
+        function renderWeatherCarousel() {
+            const container = document.getElementById('weather-carousel');
+            if(!container || !realWeatherForecast || realWeatherForecast.length === 0) return;
+            container.innerHTML = '';
+            
+            const daysCount = Math.min(realWeatherForecast.length, 7);
+            for (let i = 0; i < daysCount; i++) {
+                const item = realWeatherForecast[i];
+                const d = new Date(item.date);
+                const month = d.getMonth() + 1;
+                const date = d.getDate();
+                const dayStr = ['일', '월', '화', '수', '목', '금', '토'][d.getDay()];
+                const badge = i === 0 ? '<span class="ml-1 bg-blue-100 text-blue-800 text-[10px] px-1.5 py-0.5 rounded-full font-bold">오늘</span>' : `<span class="ml-1 bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 text-[10px] px-1.5 py-0.5 rounded-full font-bold">Day ${i+1}</span>`;
+
+                container.innerHTML += `
+                    <div onclick="openWeatherDetail(${i}, '${month}월 ${date}일 (${dayStr})')" class="cursor-pointer hover:bg-blue-100/70 transition snap-center min-w-[85%] sm:min-w-[45%] flex items-center justify-between bg-blue-50/50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-100 dark:border-blue-900/50 flex-shrink-0">
+                        <div class="flex items-center gap-3">
+                            <div class="text-3xl">${item.icon}</div>
+                            <div>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 font-medium mb-0.5">${month}월 ${date}일 (${dayStr}) ${badge}</p>
+                                <h3 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                    ${item.minTemp}° ~ ${item.maxTemp}°C <span class="text-sm font-normal text-gray-500 dark:text-gray-400">${item.desc}</span>
+                                </h3>
+                                <p class="text-[11px] text-blue-500 dark:text-blue-400 mt-0.5">강수확률 ${item.pop}%</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        function renderWeatherFallback() {
+            const container = document.getElementById('weather-carousel');
+            if (!container) return;
+            container.innerHTML = `
+                <div class="text-sm text-center w-full py-3 bg-blue-50 dark:bg-gray-800 rounded-xl p-3">
+                    시드니 기상 데이터를 불러오지 못했습니다. 네트워크를 확인해 주세요.
+                </div>
+            `;
+        }
+
+        function openWeatherDetail(index, dateStr) {
+            const data = realWeatherForecast[index];
+            if (!data) return;
+
+            document.getElementById('wd-date').innerText = dateStr;
+            document.getElementById('wd-icon').innerText = data.icon;
+            document.getElementById('wd-temp').innerText = `${data.maxTemp}°C`;
+            document.getElementById('wd-desc').innerText = data.desc;
+            document.getElementById('wd-minmax').innerText = `${data.minTemp}°C / ${data.maxTemp}°C`;
+            document.getElementById('wd-rain').innerText = `${data.pop}%`;
+
+            const hourlyContainer = document.getElementById('wd-hourly-scroll');
+            if (data.hourly && data.hourly.length > 0) {
+                hourlyContainer.innerHTML = data.hourly.map(h => `
+                    <div class="flex flex-col items-center min-w-[50px] bg-gray-50 dark:bg-gray-800/80 p-2 rounded-xl text-center flex-shrink-0">
+                        <span class="text-[10px] text-gray-400 mb-1">${h.time}</span>
+                        <span class="text-lg my-0.5">${h.icon}</span>
+                        <span class="text-xs font-bold text-gray-800 dark:text-gray-200">${h.temp}°</span>
+                        <span class="text-[9px] text-blue-500 mt-0.5">${h.pop}%</span>
+                    </div>
+                `).join('');
+            } else {
+                hourlyContainer.innerHTML = `<span class="text-xs text-gray-400">시간별 예보 없음</span>`;
+            }
+
+            document.getElementById('weather-detail-modal').classList.remove('hidden');
+        }
+
+        function closeWeatherDetail(event) {
+            if(event && event.target.id !== 'weather-detail-modal') return;
+            document.getElementById('weather-detail-modal').classList.add('hidden');
+        }
+
+        /* --- 개인별 데이터 백업 / 복원 (JSON 내보내기/가져오기) --- */
+        function exportUserData() {
+            const dataObj = {
+                version: '2.0',
+                exportedAt: new Date().toISOString(),
+                flightInfo: flightInfo,
+                checklistData: checklistData,
+                placesData: placesData,
+                schedules: schedules,
+                itineraries: {}
+            };
+            for (let i = 1; i <= 7; i++) {
+                dataObj.itineraries[`day${i}`] = safeStorage.getItem(`itinerary_day${i}`) || '';
+            }
+
+            const jsonStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(dataObj, null, 2));
+            const dlAnchor = document.createElement('a');
+            dlAnchor.setAttribute("href", jsonStr);
+            dlAnchor.setAttribute("download", `sydney_planner_backup_${new Date().toISOString().slice(0,10)}.json`);
+            document.body.appendChild(dlAnchor);
+            dlAnchor.click();
+            dlAnchor.remove();
+            showToast("백업 파일이 다운로드되었습니다.");
+        }
+
+        function importUserData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const parsed = JSON.parse(e.target.result);
+                    if (parsed.flightInfo) {
+                        flightInfo = parsed.flightInfo;
+                        safeStorage.setItem('sydney_flight', JSON.stringify(flightInfo));
+                    }
+                    if (parsed.checklistData) {
+                        checklistData = parsed.checklistData;
+                        safeStorage.setItem('sydney_checklist', JSON.stringify(checklistData));
+                    }
+                    if (parsed.placesData) {
+                        placesData = parsed.placesData;
+                        safeStorage.setItem('sydney_places', JSON.stringify(placesData));
+                    }
+                    if (parsed.schedules) {
+                        schedules = parsed.schedules;
+                        safeStorage.setItem('sydney_schedules', JSON.stringify(schedules));
+                    }
+                    if (parsed.itineraries) {
+                        for (let key in parsed.itineraries) {
+                            safeStorage.setItem(`itinerary_${key}`, parsed.itineraries[key]);
+                        }
+                    }
+
+                    renderFlightInfo();
+                    renderChecklist();
+                    renderPlaces();
+                    renderItinerary();
+                    renderSchedule();
+                    renderHomeSchedule();
+                    showToast("데이터를 성공적으로 불러왔습니다!");
+                } catch (err) {
+                    console.error("파일 가져오기 실패:", err);
+                    showToast("파일 형식이 올바르지 않습니다.", true);
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        function resetAllData() {
+            flightInfo = defaultFlight;
+            checklistData = defaultChecklist;
+            placesData = defaultPlaces;
+            schedules = {};
+            safeStorage.clear();
+
+            safeStorage.setItem('sydney_flight', JSON.stringify(flightInfo));
+            safeStorage.setItem('sydney_checklist', JSON.stringify(checklistData));
+            safeStorage.setItem('sydney_places', JSON.stringify(placesData));
+            safeStorage.setItem('sydney_schedules', JSON.stringify(schedules));
+
+            renderFlightInfo();
+            renderChecklist();
+            renderPlaces();
+            renderItinerary();
+            renderSchedule();
+            renderRecommendations();
+            renderHomeSchedule();
+            showToast("기본 데이터로 초기화되었습니다.");
+        }
+
+        /* --- 편집 가능한 리스트(체크리스트, 장소) 로직 (요구사항 1 반영: 렌더링 내 덮어쓰기 삭제) --- */
+        function renderChecklist() {
+            const container = document.getElementById('checklist-container');
+            if (!container) return;
+            container.innerHTML = '';
+            
+            checklistData.forEach((item, index) => {
+                const li = document.createElement('li');
+                li.className = "flex items-start justify-between p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-700/50 group";
+                
+                li.innerHTML = `
+                    <div class="flex items-center mt-0.5">
+                        <input id="${item.id}" type="checkbox" class="checklist-cb w-4 h-4 text-blue-600 bg-white border-gray-300 rounded focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600" ${item.checked ? 'checked' : ''} onchange="toggleChecklist(${index}, this.checked)">
+                        <label for="${item.id}" class="ml-3 text-sm font-medium text-gray-900 dark:text-gray-200 cursor-pointer break-all">
+                            ${item.label}
+                        </label>
+                    </div>
+                    <button onclick="deleteChecklistItem(${index})" class="text-gray-400 hover:text-red-500 px-2 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                `;
+                container.appendChild(li);
+            });
+            // safeStorage.setItem 삭제 완료: 단순 렌더링 시 스토리지 덮어쓰기 없음
+        }
+
+        function toggleChecklist(index, isChecked) {
+            checklistData[index].checked = isChecked;
+            safeStorage.setItem('sydney_checklist', JSON.stringify(checklistData));
+            showAutoSaveIndicator();
+        }
+
+        function addChecklistItem() {
+            const input = document.getElementById('new-chk-input');
+            const val = input.value.trim();
+            if(!val) return;
+            
+            checklistData.push({ id: 'chk_' + Date.now(), label: val, checked: false });
+            safeStorage.setItem('sydney_checklist', JSON.stringify(checklistData));
+            input.value = '';
+            renderChecklist();
+            showAutoSaveIndicator();
+            showToast('할 일이 추가되었습니다.');
+        }
+
+        function deleteChecklistItem(index) {
+            checklistData.splice(index, 1);
+            safeStorage.setItem('sydney_checklist', JSON.stringify(checklistData));
+            renderChecklist();
+            showAutoSaveIndicator();
+        }
+
+        function renderPlaces() {
+            const categories = ['sights', 'food', 'shopping'];
+            const bgColors = { sights: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300', food: 'bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300', shopping: 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300' };
+
+            categories.forEach(cat => {
+                const container = document.getElementById(`places-${cat}`);
+                if (!container) return;
+                container.innerHTML = '';
+                placesData[cat].forEach((place, index) => {
+                    container.innerHTML += `
+                        <span class="${bgColors[cat]} px-2.5 py-1 rounded-md text-[13px] font-medium flex items-center gap-1 shadow-sm">
+                            ${place}
+                            <button onclick="deletePlace('${cat}', ${index})" class="hover:text-red-500 focus:outline-none ml-0.5">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
+                            </button>
+                        </span>
+                    `;
+                });
+            });
+            // safeStorage.setItem 삭제 완료: 단순 렌더링 시 스토리지 덮어쓰기 없음
+        }
+
+        function addPlace(cat) {
+            const input = document.getElementById(`new-place-${cat}`);
+            const val = input.value.trim();
+            if(!val) return;
+            placesData[cat].push(val);
+            safeStorage.setItem('sydney_places', JSON.stringify(placesData));
+            input.value = '';
+            renderPlaces();
+            showAutoSaveIndicator();
+        }
+
+        function deletePlace(cat, index) {
+            placesData[cat].splice(index, 1);
+            safeStorage.setItem('sydney_places', JSON.stringify(placesData));
+            renderPlaces();
+            showAutoSaveIndicator();
+        }
+
+        /* --- 스케줄 로직 (5분 단위 & 포맷 변경 적용) --- */
+        function switchDayTab(day) {
+            currentDayTab = day;
+            renderSchedule();
+        }
+
+        function renderHomeSchedule() {
+            const container = document.getElementById('home-schedule-summary');
+            if (!container) return;
+            let html = '';
+            
+            let hasAnySchedule = false;
+            for(let i=1; i<=7; i++) {
+                const dayItems = (schedules[`day${i}`] || []).sort((a,b) => a.time.localeCompare(b.time));
+                if(dayItems.length > 0) {
+                    hasAnySchedule = true;
+                    html += `<div class="mb-3 last:mb-0">
+                                <h4 class="text-sm font-bold text-gray-800 dark:text-gray-200 mb-1 border-l-2 border-blue-500 pl-2">Day ${i}</h4>
+                                <div class="space-y-1 pl-2.5 border-l-2 border-gray-100 dark:border-gray-700 ml-[1px]">`;
+                    
+                    const previewItems = dayItems.slice(0, 3);
+                    previewItems.forEach(item => {
+                        const formattedTime = formatKoreanTime(item.time);
+                        html += `<div class="text-sm flex gap-2 items-baseline"><span class="text-blue-600 dark:text-blue-400 font-semibold min-w-[70px] text-xs">${formattedTime}</span> <span class="text-gray-700 dark:text-gray-300 truncate">${item.place}</span></div>`;
+                    });
+                    
+                    if(dayItems.length > 3) {
+                        html += `<div class="text-xs text-gray-400 mt-1 font-medium">+${dayItems.length - 3}개 일정 더보기</div>`;
+                    }
+                    html += `</div></div>`;
+                }
+            }
+            
+            if(!hasAnySchedule) {
+                html = `<p class="text-sm text-gray-500 text-center py-4 bg-gray-50 dark:bg-gray-800 rounded-lg">아직 저장된 스케줄이 없습니다.<br>스케줄 탭에서 여행 일정을 추가해 보세요!</p>`;
+            }
+            container.innerHTML = html;
+        }
+
+        function renderSchedule() {
+            const tabContainer = document.getElementById('day-tabs-container');
+            if (tabContainer) {
+                let tabsHtml = '';
+                for(let i=1; i<=7; i++) {
+                    const activeClass = i === currentDayTab 
+                        ? 'bg-blue-600 text-white shadow-md' 
+                        : 'bg-white dark:bg-darkCard text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700';
+                    tabsHtml += `<button onclick="switchDayTab(${i})" class="px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all ${activeClass}">Day ${i}</button>`;
+                }
+                tabContainer.innerHTML = tabsHtml;
+            }
+
+            const container = document.getElementById('schedule-container');
+            if (!container) return;
+            const i = currentDayTab; 
+            const dayItems = (schedules[`day${i}`] || []).sort((a,b) => a.time.localeCompare(b.time));
+            
+            let html = `
+            <div class="bg-white dark:bg-darkCard rounded-2xl shadow-sm p-4 border-t-4 border-blue-500 animation-fadeIn">
+                <h3 class="font-bold text-lg mb-4 text-gray-800 dark:text-white flex items-center gap-2">
+                    Day ${i} 상세 일정
+                </h3>
+                <div class="space-y-3 mb-5">`;
+
+            for(let j=0; j<dayItems.length; j++) {
+                const item = dayItems[j];
+                const formattedTime = formatKoreanTime(item.time);
+                
+                html += `
+                    <div class="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-xl border border-gray-100 dark:border-gray-700/50">
+                        <div class="flex justify-between items-start">
+                            <div class="flex flex-col">
+                                <span class="text-blue-600 dark:text-blue-400 font-bold text-base leading-tight mb-1">${formattedTime}</span>
+                                <span class="font-semibold text-gray-900 dark:text-white text-base">${item.place}</span>
+                                ${item.activity ? `<span class="text-gray-500 dark:text-gray-400 text-sm mt-0.5">${item.activity}</span>` : ''}
+                            </div>
+                            <button onclick="deleteSchedule(${i}, ${item.id})" class="text-gray-400 hover:text-red-500 p-1">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
+                        </div>
+                    </div>
+                `;
+
+                if (j < dayItems.length - 1) {
+                    const nextItem = dayItems[j+1];
+                    if (item.place && nextItem.place) {
+                        const originSafe = encodeURIComponent(item.place + ', Sydney');
+                        const destSafe = encodeURIComponent(nextItem.place + ', Sydney');
+                        const dirUrl = `https://www.google.com/maps/dir/?api=1&origin=${originSafe}&destination=${destSafe}&travelmode=transit`;
+                        
+                        html += `
+                            <div class="flex justify-center -my-2 relative z-10">
+                                <a href="${dirUrl}" target="_blank" class="bg-white border border-indigo-100 dark:bg-gray-700 dark:border-gray-600 text-indigo-600 dark:text-indigo-300 text-[11px] px-3 py-1 rounded-full flex items-center gap-1 shadow-sm font-semibold active:bg-indigo-50 dark:active:bg-gray-600">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path></svg>
+                                    길찾기
+                                </a>
+                            </div>
+                        `;
+                    }
+                }
+            }
+
+            if (dayItems.length === 0) {
+                html += `<p class="text-sm text-gray-400 text-center py-8 bg-gray-50 dark:bg-gray-800/50 rounded-xl">등록된 일정이 없습니다.</p>`;
+            }
+
+            html += `</div>
+                <div class="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-xl mt-4 border border-blue-100 dark:border-blue-900/50">
+                    <div class="flex flex-col gap-2">
+                        <div class="flex gap-2">
+                            <div class="flex flex-shrink-0 gap-1 items-center" style="width: 145px;">
+                                <select id="ampm-day${i}" class="w-full text-xs border border-gray-300 rounded-lg py-2 px-1 dark:bg-gray-800 dark:border-gray-600 dark:text-white outline-none bg-white cursor-pointer">
+                                    <option value="AM">오전</option>
+                                    <option value="PM">오후</option>
+                                </select>
+                                <select id="hour-day${i}" class="w-full text-xs border border-gray-300 rounded-lg py-2 px-1 dark:bg-gray-800 dark:border-gray-600 dark:text-white outline-none bg-white cursor-pointer">
+                                    ${Array.from({length: 12}, (_, k) => { let v = k === 0 ? 12 : k; return `<option value="${v}">${v}</option>`; }).join('')}
+                                </select>
+                                <span class="text-gray-500 font-bold">:</span>
+                                <select id="minute-day${i}" class="w-full text-xs border border-gray-300 rounded-lg py-2 px-1 dark:bg-gray-800 dark:border-gray-600 dark:text-white outline-none bg-white cursor-pointer">
+                                    ${Array.from({length: 12}, (_, k) => { let v = String(k * 5).padStart(2, '0'); return `<option value="${v}">${v}</option>`; }).join('')}
+                                </select>
+                            </div>
+                            <input type="text" id="place-day${i}" placeholder="장소명" class="flex-1 min-w-0 text-sm border border-gray-300 rounded-lg p-2 dark:bg-gray-800 dark:border-gray-600 dark:text-white outline-none focus:border-blue-500 bg-white">
+                        </div>
+                        <div class="flex gap-2">
+                            <input type="text" id="activity-day${i}" placeholder="할 일 메모 (선택)" class="flex-1 text-sm border border-gray-300 rounded-lg p-2 dark:bg-gray-800 dark:border-gray-600 dark:text-white outline-none focus:border-blue-500 bg-white">
+                            <button onclick="addSchedule(${i})" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-bold shadow active:bg-blue-800 whitespace-nowrap transition-colors">추가</button>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+            
+            container.innerHTML = html;
+        }
+
+        function addSchedule(day) {
+            const ampm = document.getElementById(`ampm-day${day}`).value;
+            let hour = parseInt(document.getElementById(`hour-day${day}`).value, 10);
+            const minute = document.getElementById(`minute-day${day}`).value;
+            
+            if (ampm === 'PM' && hour !== 12) hour += 12;
+            if (ampm === 'AM' && hour === 12) hour = 0;
+            
+            const timeVal = `${String(hour).padStart(2, '0')}:${minute}`;
+            
+            const placeEl = document.getElementById(`place-day${day}`);
+            const activityEl = document.getElementById(`activity-day${day}`);
+
+            if(!placeEl.value.trim()) {
+                showToast("장소를 입력하세요.", true);
+                return;
+            }
+
+            if(!schedules[`day${day}`]) schedules[`day${day}`] = [];
+            
+            schedules[`day${day}`].push({
+                id: Date.now(),
+                time: timeVal,
+                place: placeEl.value.trim(),
+                activity: activityEl.value.trim()
+            });
+
+            safeStorage.setItem('sydney_schedules', JSON.stringify(schedules));
+            
+            placeEl.value = '';
+            activityEl.value = '';
+            
+            renderSchedule();
+            renderHomeSchedule(); 
+            showToast("일정 추가 완료");
+        }
+
+        function deleteSchedule(day, id) {
+            schedules[`day${day}`] = schedules[`day${day}`].filter(item => item.id !== id);
+            safeStorage.setItem('sydney_schedules', JSON.stringify(schedules));
+            renderSchedule();
+            renderHomeSchedule();
+        }
+
+        function renderItinerary() {
+            const container = document.getElementById('itinerary-container');
+            if (!container) return;
+            container.innerHTML = '';
+            for(let i=1; i<=7; i++) {
+                const savedVal = safeStorage.getItem(`itinerary_day${i}`) || '';
+                const itemDiv = document.createElement('div');
+                itemDiv.className = "bg-white dark:bg-darkCard p-4 rounded-2xl shadow-sm border border-transparent dark:border-gray-800";
+                
+                const title = document.createElement('h4');
+                title.className = "font-bold text-sm mb-2 text-blue-600 dark:text-blue-400";
+                title.textContent = `Day ${i}`;
+                
+                const textarea = document.createElement('textarea');
+                textarea.className = "w-full text-sm p-2 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white outline-none focus:border-blue-500 resize-none h-16 bg-gray-50";
+                textarea.placeholder = "간단한 메모나 목표를 적어보세요...";
+                textarea.value = savedVal;
+                
+                textarea.addEventListener('input', (e) => debouncedSave(`itinerary_day${i}`, e.target.value));
+                textarea.addEventListener('change', (e) => debouncedSave(`itinerary_day${i}`, e.target.value));
+                
+                itemDiv.appendChild(title);
+                itemDiv.appendChild(textarea);
+                container.appendChild(itemDiv);
+            }
+        }
+
+        function renderRecommendations() {
+            const container = document.getElementById('recs-container');
+            if (!container) return;
+            container.innerHTML = '';
+            recommendations.forEach((item, index) => {
+                const savedMemo = safeStorage.getItem(`rec_memo_${index}`) || '';
+                const searchKeyword = encodeURIComponent(`시드니 ${item.name}`);
+                const gmapsLink = `https://www.google.com/maps/search/?api=1&query=${searchKeyword}`;
+                
+                const itemDiv = document.createElement('div');
+                itemDiv.className = "p-4 bg-white dark:bg-darkCard rounded-2xl shadow-sm border border-transparent dark:border-gray-800";
+                
+                itemDiv.innerHTML = `
+                    <div class="flex justify-between items-start mb-2">
+                        <div>
+                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${item.type.includes('음식') ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300' : 'bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300'}">${item.type}</span>
+                            <h3 class="font-bold mt-1.5 text-gray-900 dark:text-white text-base">${item.name}</h3>
+                        </div>
+                        <a href="${gmapsLink}" target="_blank" class="bg-gray-100 dark:bg-gray-800 p-2 rounded-full text-blue-600 dark:text-blue-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                        </a>
+                    </div>
+                `;
+
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.className = "w-full text-sm p-2 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white outline-none focus:border-blue-500 bg-gray-50";
+                input.placeholder = "별점이나 후기를 남겨보세요...";
+                input.value = savedMemo;
+                
+                input.addEventListener('input', (e) => debouncedSave(`rec_memo_${index}`, e.target.value));
+                input.addEventListener('change', (e) => debouncedSave(`rec_memo_${index}`, e.target.value));
+
+                itemDiv.appendChild(input);
+                container.appendChild(itemDiv);
+            });
+        }
+
+        /* --- 다크모드 로직 --- */
+        const themeToggleBtn = document.getElementById('theme-toggle');
+        const themeToggleKnob = document.getElementById('theme-toggle-knob');
+        
+        function updateThemeUI(isDark) {
+            if (!themeToggleBtn || !themeToggleKnob) return;
+            if (isDark) {
+                document.documentElement.classList.add('dark');
+                themeToggleBtn.classList.replace('bg-gray-300', 'bg-blue-600');
+                themeToggleKnob.classList.replace('translate-x-1', 'translate-x-6');
+            } else {
+                document.documentElement.classList.remove('dark');
+                themeToggleBtn.classList.replace('bg-blue-600', 'bg-gray-300');
+                themeToggleKnob.classList.replace('translate-x-6', 'translate-x-1');
+            }
+        }
+
+        if (themeToggleBtn) {
+            themeToggleBtn.addEventListener('click', () => {
+                const isDark = !document.documentElement.classList.contains('dark');
+                safeStorage.setItem('theme', isDark ? 'dark' : 'light');
+                updateThemeUI(isDark);
+            });
+        }
+
+        /* --- 앱 초기화 (요구사항 2 반영: loadStoredData 호출 후 렌더링) --- */
+        function initApp() {
+            try {
+                console.log('🚀 [앱 초기화 시작]');
+                // 1. 최신 스토리지 데이터 먼저 동기화
+                loadStoredData();
+
+                // 2. 테마 복원
+                const savedTheme = safeStorage.getItem('theme');
+                const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                updateThemeUI(savedTheme === 'dark' || (!savedTheme && prefersDark));
+
+                // 3. UI 렌더링 함수 순차 호출
+                renderFlightInfo();
+                renderChecklist();
+                renderPlaces();
+                renderItinerary();
+                renderSchedule();
+                renderRecommendations();
+                renderHomeSchedule();
+
+                // 4. 이전 활성 탭 복원
+                const savedTab = safeStorage.getItem('sydney_active_tab') || 'home';
+                if (savedTab === 'plan') switchTab('home');
+                else switchTab(savedTab);
+                
+                console.log('✅ [앱 초기화 완료] 화면 렌더링이 성공적으로 완료되었습니다.');
+            } catch (err) {
+                console.error('❌ [앱 초기화 중 오류]:', err);
+            }
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initApp);
+        } else {
+            initApp();
+        }
+    </script>
+</body>
+</html>
